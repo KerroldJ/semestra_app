@@ -11,12 +11,18 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<AppSettings> getSettings() async {
     final settingsMap = await localDataSource.getAllSettings();
     
+    final routesStr = settingsMap['main_tab_routes'];
+    final mainTabRoutes = routesStr != null && routesStr.isNotEmpty
+        ? routesStr.split(',')
+        : ['/dashboard', '/semesters', '/subjects', '/schedule', '/notes'];
+
     return AppSettings(
       themeMode: settingsMap['theme_mode'] ?? 'dark',
       notificationsEnabled: settingsMap['notifications_enabled'] == 'true',
       pomodoroFocusDuration: int.tryParse(settingsMap['pomodoro_focus_duration'] ?? '25') ?? 25,
       pomodoroShortBreak: int.tryParse(settingsMap['pomodoro_short_break'] ?? '5') ?? 5,
       pomodoroLongBreak: int.tryParse(settingsMap['pomodoro_long_break'] ?? '15') ?? 15,
+      mainTabRoutes: mainTabRoutes,
     );
   }
 
@@ -27,5 +33,6 @@ class SettingsRepositoryImpl implements SettingsRepository {
     await localDataSource.saveSetting('pomodoro_focus_duration', settings.pomodoroFocusDuration.toString());
     await localDataSource.saveSetting('pomodoro_short_break', settings.pomodoroShortBreak.toString());
     await localDataSource.saveSetting('pomodoro_long_break', settings.pomodoroLongBreak.toString());
+    await localDataSource.saveSetting('main_tab_routes', settings.mainTabRoutes.join(','));
   }
 }

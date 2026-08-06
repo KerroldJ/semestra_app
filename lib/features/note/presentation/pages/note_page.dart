@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:semestra_app/features/note/presentation/providers/note_provider.dart';
 import 'package:semestra_app/features/subject/presentation/providers/subject_provider.dart';
 import 'package:semestra_app/features/note/domain/entities/note_entity.dart';
@@ -15,7 +16,6 @@ class NotePage extends ConsumerStatefulWidget {
 class _NotePageState extends ConsumerState<NotePage> {
   String _searchQuery = '';
   String? _selectedSubjectId;
-  String? _selectedTag;
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +24,6 @@ class _NotePageState extends ConsumerState<NotePage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Academic Workspace Notes'),
-      ),
       body: subjectState.when(
         data: (subjects) {
           if (subjects.isEmpty) {
@@ -44,23 +41,16 @@ class _NotePageState extends ConsumerState<NotePage> {
 
           return notesState.when(
             data: (notes) {
-              // Extract all tags for filter
-              final allTags = notes.expand((n) => n.tags).toSet().toList();
-
               // Apply filters
               var filteredNotes = notes;
               if (_selectedSubjectId != null) {
                 filteredNotes = filteredNotes.where((n) => n.subjectId == _selectedSubjectId).toList();
               }
-              if (_selectedTag != null) {
-                filteredNotes = filteredNotes.where((n) => n.tags.contains(_selectedTag)).toList();
-              }
               if (_searchQuery.trim().isNotEmpty) {
                 final query = _searchQuery.toLowerCase();
                 filteredNotes = filteredNotes.where((n) {
                   return n.title.toLowerCase().contains(query) ||
-                      n.content.toLowerCase().contains(query) ||
-                      n.tags.any((t) => t.toLowerCase().contains(query));
+                      n.content.toLowerCase().contains(query);
                 }).toList();
               }
 
@@ -74,7 +64,7 @@ class _NotePageState extends ConsumerState<NotePage> {
                         TextField(
                           onChanged: (val) => setState(() => _searchQuery = val),
                           decoration: InputDecoration(
-                            hintText: 'Search notes, contents, or tags...',
+                            hintText: 'Search notes and contents...',
                             prefixIcon: const Icon(Icons.search_rounded),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
@@ -85,48 +75,22 @@ class _NotePageState extends ConsumerState<NotePage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String?>(
-                                value: _selectedSubjectId,
-                                decoration: const InputDecoration(
-                                  labelText: 'Subject Filter',
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: [
-                                  const DropdownMenuItem(value: null, child: Text('All Subjects')),
-                                  ...subjects.map((sub) {
-                                    return DropdownMenuItem(
-                                      value: sub.id,
-                                      child: Text(sub.code),
-                                    );
-                                  }),
-                                ],
-                                onChanged: (val) => setState(() => _selectedSubjectId = val),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String?>(
-                                value: _selectedTag,
-                                decoration: const InputDecoration(
-                                  labelText: 'Tag Filter',
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: [
-                                  const DropdownMenuItem(value: null, child: Text('All Tags')),
-                                  ...allTags.map((tag) {
-                                    return DropdownMenuItem(
-                                      value: tag,
-                                      child: Text('#$tag'),
-                                    );
-                                  }),
-                                ],
-                                onChanged: (val) => setState(() => _selectedTag = val),
-                              ),
-                            ),
+                        DropdownButtonFormField<String?>(
+                          value: _selectedSubjectId,
+                          decoration: const InputDecoration(
+                            labelText: 'Subject Filter',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('All Subjects')),
+                            ...subjects.map((sub) {
+                              return DropdownMenuItem(
+                                value: sub.id,
+                                child: Text(sub.code),
+                              );
+                            }),
                           ],
+                          onChanged: (val) => setState(() => _selectedSubjectId = val),
                         ),
                       ],
                     ),
@@ -149,7 +113,7 @@ class _NotePageState extends ConsumerState<NotePage> {
                             padding: const EdgeInsets.all(24),
                             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 350,
-                              mainAxisExtent: 220,
+                              mainAxisExtent: 140, // Reduced from 220
                               crossAxisSpacing: 16,
                               mainAxisSpacing: 16,
                             ),
@@ -180,103 +144,9 @@ class _NotePageState extends ConsumerState<NotePage> {
         error: (err, stack) => Center(child: Text('Error loading subjects: $err')),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddNoteDialog(context, ref),
+        onPressed: () => context.push('/notes/create'),
         child: const Icon(Icons.add_rounded),
       ),
-    );
-  }
-
-  void _showAddNoteDialog(BuildContext context, WidgetRef ref) {
-    final subjects = ref.read(subjectNotifierProvider).value ?? [];
-    if (subjects.isEmpty) return;
-
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
-    final tagsController = TextEditingController();
-    String selectedSubjectId = subjects.first.id;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('New Lecture Note'),
-              content: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.8,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        value: selectedSubjectId,
-                        decoration: const InputDecoration(labelText: 'Subject'),
-                        items: subjects.map((sub) {
-                          return DropdownMenuItem(
-                            value: sub.id,
-                            child: Text('${sub.code} - ${sub.name}'),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => selectedSubjectId = val);
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: titleController,
-                        decoration: const InputDecoration(labelText: 'Note Title'),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: contentController,
-                        decoration: const InputDecoration(
-                          labelText: 'Note Content (supports Markdown like #, - [ ], code blocks)',
-                          alignLabelWithHint: true,
-                        ),
-                        maxLines: 8,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: tagsController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tags (comma-separated)',
-                          hintText: 'e.g. algebra, lecture1, exam-prep',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (titleController.text.trim().isNotEmpty && contentController.text.trim().isNotEmpty) {
-                      final tags = tagsController.text
-                          .split(',')
-                          .map((t) => t.trim().toLowerCase())
-                          .where((t) => t.isNotEmpty)
-                          .toList();
-
-                      ref.read(noteNotifierProvider.notifier).addNote(
-                            subjectId: selectedSubjectId,
-                            title: titleController.text.trim(),
-                            content: contentController.text.trim(),
-                            tags: tags,
-                          );
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Create'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }
@@ -297,78 +167,55 @@ class _NoteCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Card(
       child: InkWell(
         onTap: () => _openNoteViewer(context, ref),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: subjectColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          subjectCode,
-                          style: TextStyle(
-                            color: subjectColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: subjectColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      subjectCode,
+                      style: TextStyle(
+                        color: subjectColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
-                      Text(
-                        _formatDate(note.createdAt),
-                        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
                   Text(
-                    note.title,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    note.content,
-                    style: theme.textTheme.bodyMedium,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    _formatDate(note.createdAt),
+                    style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                   ),
                 ],
               ),
-              if (note.tags.isNotEmpty)
-                Wrap(
-                  spacing: 4,
-                  children: note.tags.take(3).map((tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : Colors.black12,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '#$tag',
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
-                      ),
-                    );
-                  }).toList(),
-                ),
+              const SizedBox(height: 8),
+              Text(
+                note.title,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                note.content,
+                style: theme.textTheme.bodyMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -435,20 +282,7 @@ class _NoteCard extends ConsumerWidget {
                   // Custom offline Markdown parser/renderer
                   _CustomMarkdownRenderer(markdown: note.content),
                   const SizedBox(height: 24),
-                  if (note.tags.isNotEmpty) ...[
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: note.tags.map((tag) {
-                        return Chip(
-                          label: Text('#$tag'),
-                          backgroundColor: Colors.transparent,
-                          side: const BorderSide(color: Colors.grey),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

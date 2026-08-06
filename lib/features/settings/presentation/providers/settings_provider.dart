@@ -14,6 +14,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           pomodoroFocusDuration: 25,
           pomodoroShortBreak: 5,
           pomodoroLongBreak: 15,
+          mainTabRoutes: [
+            '/dashboard',
+            '/semesters',
+            '/subjects',
+            '/schedule',
+            '/notes'
+          ],
         )) {
     loadSettings();
   }
@@ -44,6 +51,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> toggleNotifications(bool enabled) async {
     await updateSettings(state.copyWith(notificationsEnabled: enabled));
   }
+
+  Future<void> updateMainTabRoutes(List<String> routes) async {
+    await updateSettings(state.copyWith(mainTabRoutes: routes));
+  }
+
+
 
   Future<void> updatePomodoroFocus(int duration) async {
     await updateSettings(state.copyWith(pomodoroFocusDuration: duration));

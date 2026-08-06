@@ -20,14 +20,34 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
   }
 
   Future<void> _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Drop all tables
+    await db.execute('DROP TABLE IF EXISTS settings');
+    await db.execute('DROP TABLE IF EXISTS readings');
+    await db.execute('DROP TABLE IF EXISTS expenses');
+    await db.execute('DROP TABLE IF EXISTS grades');
+    await db.execute('DROP TABLE IF EXISTS daily_tasks');
+    await db.execute('DROP TABLE IF EXISTS study_sessions');
+    await db.execute('DROP TABLE IF EXISTS exams');
+    await db.execute('DROP TABLE IF EXISTS notes');
+    await db.execute('DROP TABLE IF EXISTS assignments');
+    await db.execute('DROP TABLE IF EXISTS schedules');
+    await db.execute('DROP TABLE IF EXISTS subjects');
+    await db.execute('DROP TABLE IF EXISTS semesters');
+    
+    // Recreate
+    await _createDB(db, newVersion);
   }
 
   Future<void> _createDB(Database db, int version) async {

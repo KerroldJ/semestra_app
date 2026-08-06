@@ -14,6 +14,11 @@ class SubjectPage extends ConsumerWidget {
     final semestersState = ref.watch(semesterNotifierProvider);
     final theme = Theme.of(context);
 
+    final semesters = semestersState.value ?? [];
+    final activeSem = semesters.isNotEmpty
+        ? semesters.firstWhere((s) => s.isActive, orElse: () => semesters.first)
+        : null;
+
     return Scaffold(
       body: semestersState.when(
         data: (semesters) {
@@ -30,12 +35,11 @@ class SubjectPage extends ConsumerWidget {
             );
           }
 
-          // Find active semester or default to first
-          final activeSem = semesters.firstWhere((s) => s.isActive, orElse: () => semesters.first);
+          final currentActiveSem = semesters.firstWhere((s) => s.isActive, orElse: () => semesters.first);
 
           return subjectsState.when(
             data: (subjects) {
-              final semesterSubjects = subjects.where((s) => s.semesterId == activeSem.id).toList();
+              final semesterSubjects = subjects.where((s) => s.semesterId == currentActiveSem.id).toList();
 
               return CustomScrollView(
                 slivers: [
@@ -43,70 +47,36 @@ class SubjectPage extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        // Responsive header card containing semester info and add subject button
+                        // Responsive header card containing semester info
                         Card(
                           margin: EdgeInsets.zero,
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final isMobile = constraints.maxWidth < 450;
-                                
-                                final detailsWidget = Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_rounded, color: Colors.grey),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Academic Semester',
-                                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            activeSem.name,
-                                            style: theme.textTheme.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, color: Colors.grey),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Academic Semester',
+                                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
                                       ),
-                                    ),
-                                  ],
-                                );
-
-                                final actionButton = ElevatedButton.icon(
-                                  onPressed: () => _showAddSubjectDialog(context, ref, activeSem.id),
-                                  icon: const Icon(Icons.add_rounded),
-                                  label: const Text('Add Subject'),
-                                  style: isMobile
-                                      ? ElevatedButton.styleFrom(
-                                          minimumSize: const Size.fromHeight(48),
-                                        )
-                                      : null,
-                                );
-
-                                return isMobile
-                                    ? Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: [
-                                          detailsWidget,
-                                          const SizedBox(height: 16),
-                                          actionButton,
-                                        ],
-                                      )
-                                    : Row(
-                                        children: [
-                                          Expanded(child: detailsWidget),
-                                          const SizedBox(width: 16),
-                                          actionButton,
-                                        ],
-                                      );
-                              },
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        currentActiveSem.name,
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -148,6 +118,12 @@ class SubjectPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error loading semesters: $err')),
       ),
+      floatingActionButton: activeSem != null
+          ? FloatingActionButton(
+              onPressed: () => _showAddSubjectDialog(context, ref, activeSem.id),
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
     );
   }
 

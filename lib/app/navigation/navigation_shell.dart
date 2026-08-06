@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:semestra_app/features/settings/presentation/providers/settings_provider.dart';
 import '../../core/theme/app_theme.dart';
 
-class NavigationShell extends StatelessWidget {
+class NavigationShell extends ConsumerWidget {
   final Widget child;
 
   const NavigationShell({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
+    final settings = ref.watch(settingsNotifierProvider);
     final isWide = MediaQuery.of(context).size.width > 900;
 
     final destinations = [
@@ -38,15 +41,15 @@ class NavigationShell extends StatelessWidget {
         isMainTab: true,
       ),
       _NavDestination(
-        route: '/planner',
-        icon: Icons.task_alt_rounded,
-        label: 'Planner',
-        isMainTab: true,
-      ),
-      _NavDestination(
         route: '/notes',
         icon: Icons.edit_note_rounded,
         label: 'Notes',
+        isMainTab: true,
+      ),
+      _NavDestination(
+        route: '/planner',
+        icon: Icons.task_alt_rounded,
+        label: 'Planner',
         isMainTab: false,
       ),
       _NavDestination(
@@ -106,8 +109,12 @@ class NavigationShell extends StatelessWidget {
     }
 
     // Mobile layout
-    final mainDestinations = destinations.where((d) => d.isMainTab).toList();
+    final theme = Theme.of(context);
+    final mainDestinations = settings.mainTabRoutes.map((route) {
+      return destinations.firstWhere((d) => d.route == route, orElse: () => destinations.first);
+    }).toList();
     final activeIndex = mainDestinations.indexWhere((d) => location == d.route);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -123,23 +130,83 @@ class NavigationShell extends StatelessWidget {
       ),
       drawer: _MobileDrawer(destinations: destinations, activeRoute: location),
       body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: activeIndex == -1 ? 0 : activeIndex,
-        onTap: (index) {
-          context.go(mainDestinations[index].route);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? AppTheme.darkSurface
-            : AppTheme.lightSurface,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        items: mainDestinations.map((d) {
-          return BottomNavigationBarItem(
-            icon: Icon(d.icon),
-            label: d.label,
-          );
-        }).toList(),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          height: 70,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF131D30) : Colors.white,
+            borderRadius: BorderRadius.circular(35),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.35 : 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            border: Border.all(
+              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(mainDestinations.length, (index) {
+              final d = mainDestinations[index];
+              final isActive = activeIndex == index || (activeIndex == -1 && index == 0);
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: GestureDetector(
+                    onTap: () => context.go(d.route),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            d.icon,
+                            size: 22,
+                            color: isActive
+                                ? theme.colorScheme.primary
+                                : Colors.grey,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            d.label,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                              color: isActive
+                                  ? theme.colorScheme.primary
+                                  : Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 16,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? theme.colorScheme.primary
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }

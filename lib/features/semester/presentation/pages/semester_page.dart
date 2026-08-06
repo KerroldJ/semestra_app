@@ -18,15 +18,9 @@ class SemesterPage extends ConsumerWidget {
         data: (semesters) => CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddSemesterDialog(context, ref),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add Academic Semester'),
-                  ),
-                  const SizedBox(height: 24),
                   if (semesters.isEmpty)
                     Center(
                       child: Padding(
@@ -46,6 +40,10 @@ class SemesterPage extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error loading semesters: $err')),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddSemesterDialog(context, ref),
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
