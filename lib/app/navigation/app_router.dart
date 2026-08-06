@@ -13,6 +13,7 @@ import '../../features/note/presentation/pages/note_editor_page.dart';
 import '../../features/exam/presentation/pages/exam_page.dart';
 import '../../features/study_timer/presentation/pages/study_timer_page.dart';
 import '../../features/daily_planner/presentation/pages/daily_planner_page.dart';
+import '../../features/daily_planner/presentation/pages/task_editor_page.dart';
 import '../../features/grade/presentation/pages/grade_page.dart';
 import '../../features/budget/presentation/pages/budget_page.dart';
 import '../../features/reading/presentation/pages/reading_page.dart';
@@ -89,6 +90,11 @@ final appRouter = GoRouter(
       path: '/notes/create',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const NoteEditorPage(),
+    ),
+    GoRoute(
+      path: '/planner/create',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const TaskEditorPage(),
     ),
   ],
 );
