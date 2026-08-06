@@ -17,20 +17,8 @@ class SemesterPage extends ConsumerWidget {
       body: state.when(
         data: (semesters) => CustomScrollView(
           slivers: [
-            SliverAppBar(
-              floating: true,
-              expandedHeight: 120.0,
-              backgroundColor: Colors.transparent,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                title: Text(
-                  'Semester Management',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   ElevatedButton.icon(
