@@ -35,17 +35,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Assignment Tracker'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'To Do'),
-            Tab(text: 'In Progress'),
-            Tab(text: 'Completed'),
-          ],
-        ),
-      ),
       body: subjectState.when(
         data: (subjects) {
           if (subjects.isEmpty) {

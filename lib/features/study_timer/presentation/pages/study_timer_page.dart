@@ -30,9 +30,6 @@ class StudyTimerPage extends ConsumerWidget {
     else if (timerState.sessionType == 2) stateLabel = 'Long Break';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pomodoro Study Timer'),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
