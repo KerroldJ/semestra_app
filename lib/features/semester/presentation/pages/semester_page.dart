@@ -246,7 +246,7 @@ class _SemesterCard extends ConsumerWidget {
       builder: (context) {
         return AlertDialog(
           title: const Text('Delete Semester?'),
-          content: Text('Are you sure you want to delete "${semester.name}"? This action will hide all associated subjects, grades, and schedules.'),
+          content: Text('Are you sure you want to delete "${semester.name}"? This action will hide all associated subjects and schedules.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

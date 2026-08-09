@@ -7,16 +7,9 @@ import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/semester/presentation/pages/semester_page.dart';
 import '../../features/subject/presentation/pages/subject_page.dart';
 import '../../features/schedule/presentation/pages/schedule_page.dart';
-import '../../features/assignment/presentation/pages/assignment_page.dart';
-import '../../features/note/presentation/pages/note_page.dart';
-import '../../features/note/presentation/pages/note_editor_page.dart';
-import '../../features/exam/presentation/pages/exam_page.dart';
-import '../../features/study_timer/presentation/pages/study_timer_page.dart';
-import '../../features/daily_planner/presentation/pages/daily_planner_page.dart';
-import '../../features/daily_planner/presentation/pages/task_editor_page.dart';
-import '../../features/grade/presentation/pages/grade_page.dart';
-import '../../features/budget/presentation/pages/budget_page.dart';
-import '../../features/reading/presentation/pages/reading_page.dart';
+import '../../features/item/presentation/pages/planner_page.dart';
+import '../../features/item/presentation/pages/note_editor_page.dart';
+import '../../features/item/presentation/pages/task_editor_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -49,37 +42,12 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) => const NoTransitionPage(child: SchedulePage()),
         ),
         GoRoute(
-          path: '/assignments',
-          pageBuilder: (context, state) => const NoTransitionPage(child: AssignmentPage()),
-        ),
-        GoRoute(
-          path: '/notes',
-          pageBuilder: (context, state) => const NoTransitionPage(child: NotePage()),
-        ),
-        GoRoute(
-          path: '/exams',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ExamPage()),
-        ),
-        GoRoute(
-          path: '/timer',
-          pageBuilder: (context, state) => const NoTransitionPage(child: StudyTimerPage()),
-        ),
-        GoRoute(
           path: '/planner',
-          pageBuilder: (context, state) => const NoTransitionPage(child: DailyPlannerPage()),
+          pageBuilder: (context, state) => const NoTransitionPage(child: PlannerPage()),
         ),
-        GoRoute(
-          path: '/grades',
-          pageBuilder: (context, state) => const NoTransitionPage(child: GradePage()),
-        ),
-        GoRoute(
-          path: '/budget',
-          pageBuilder: (context, state) => const NoTransitionPage(child: BudgetPage()),
-        ),
-        GoRoute(
-          path: '/readings',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ReadingPage()),
-        ),
+        // Legacy deep-links now resolve to the unified Planner module.
+        GoRoute(path: '/notes', redirect: (_, __) => '/planner'),
+        GoRoute(path: '/assignments', redirect: (_, __) => '/planner'),
         GoRoute(
           path: '/settings',
           pageBuilder: (context, state) => const NoTransitionPage(child: SettingsPage()),
@@ -87,12 +55,12 @@ final appRouter = GoRouter(
       ],
     ),
     GoRoute(
-      path: '/notes/create',
+      path: '/planner/note',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const NoteEditorPage(),
     ),
     GoRoute(
-      path: '/planner/create',
+      path: '/planner/task',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const TaskEditorPage(),
     ),

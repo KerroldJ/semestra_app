@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../../../../core/database/database_backup_service.dart';
+import '../../../../core/widgets/lottie_header.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -17,20 +18,21 @@ class SettingsPage extends ConsumerWidget {
       {'route': '/semesters', 'label': 'Semesters', 'icon': Icons.calendar_month_rounded},
       {'route': '/subjects', 'label': 'Subjects', 'icon': Icons.book_rounded},
       {'route': '/schedule', 'label': 'Schedule', 'icon': Icons.schedule_rounded},
-      {'route': '/notes', 'label': 'Notes', 'icon': Icons.edit_note_rounded},
-      {'route': '/planner', 'label': 'Planner', 'icon': Icons.task_alt_rounded},
-      {'route': '/timer', 'label': 'Study Timer', 'icon': Icons.timer_rounded},
-      {'route': '/assignments', 'label': 'Assignments', 'icon': Icons.assignment_rounded},
-      {'route': '/exams', 'label': 'Assessments', 'icon': Icons.quiz_rounded},
-      {'route': '/grades', 'label': 'Grades', 'icon': Icons.analytics_rounded},
-      {'route': '/budget', 'label': 'Budget', 'icon': Icons.account_balance_wallet_rounded},
-      {'route': '/readings', 'label': 'Readings', 'icon': Icons.menu_book_rounded},
+      {'route': '/planner', 'label': 'Planner', 'icon': Icons.auto_awesome_rounded},
     ];
 
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         children: [
+          const LottieHeader(
+            url: 'https://assets9.lottiefiles.com/packages/lf20_yd8fbnml.json',
+            title: 'Settings',
+            subtitle: 'Make Semestra yours',
+            height: 100,
+            fallbackIcon: Icons.settings_suggest_rounded,
+          ),
+          const SizedBox(height: 8),
           // Theme Settings Card
           _buildSectionHeader(context, 'Aesthetics & Theme'),
           Card(
@@ -60,7 +62,7 @@ class SettingsPage extends ConsumerWidget {
                 children: List.generate(5, (index) {
                   final currentRoute = settings.mainTabRoutes.length > index
                       ? settings.mainTabRoutes[index]
-                      : ['/dashboard', '/semesters', '/subjects', '/schedule', '/notes'][index];
+                      : ['/dashboard', '/semesters', '/subjects', '/schedule', '/planner'][index];
 
                   return Column(
                     children: [
@@ -113,51 +115,6 @@ class SettingsPage extends ConsumerWidget {
                     ],
                   );
                 }),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Pomodoro settings card
-          _buildSectionHeader(context, 'Study Timer Config'),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  _buildSliderTile(
-                    title: 'Focus Duration',
-                    value: settings.pomodoroFocusDuration,
-                    min: 5,
-                    max: 60,
-                    label: '${settings.pomodoroFocusDuration} min',
-                    onChanged: (val) {
-                      ref.read(settingsNotifierProvider.notifier).updatePomodoroFocus(val.toInt());
-                    },
-                  ),
-                  const Divider(),
-                  _buildSliderTile(
-                    title: 'Short Break Duration',
-                    value: settings.pomodoroShortBreak,
-                    min: 1,
-                    max: 20,
-                    label: '${settings.pomodoroShortBreak} min',
-                    onChanged: (val) {
-                      ref.read(settingsNotifierProvider.notifier).updatePomodoroShortBreak(val.toInt());
-                    },
-                  ),
-                  const Divider(),
-                  _buildSliderTile(
-                    title: 'Long Break Duration',
-                    value: settings.pomodoroLongBreak,
-                    min: 5,
-                    max: 30,
-                    label: '${settings.pomodoroLongBreak} min',
-                    onChanged: (val) {
-                      ref.read(settingsNotifierProvider.notifier).updatePomodoroLongBreak(val.toInt());
-                    },
-                  ),
-                ],
               ),
             ),
           ),
@@ -258,35 +215,5 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _buildSliderTile({
-    required String title,
-    required int value,
-    required double min,
-    required double max,
-    required String label,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(label, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
-        Slider(
-          value: value.toDouble(),
-          min: min,
-          max: max,
-          divisions: (max - min).toInt(),
-          onChanged: onChanged,
-        ),
-      ],
-    );
-  }
-
 
 }

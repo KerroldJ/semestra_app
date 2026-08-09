@@ -8,14 +8,7 @@ class DatabaseBackupService {
     'semesters',
     'subjects',
     'schedules',
-    'assignments',
-    'notes',
-    'exams',
-    'study_sessions',
-    'daily_tasks',
-    'grades',
-    'expenses',
-    'readings',
+    'items',
     'settings'
   ];
 

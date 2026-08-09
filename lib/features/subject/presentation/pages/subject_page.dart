@@ -471,7 +471,7 @@ class _SubjectCard extends ConsumerWidget {
       builder: (context) {
         return AlertDialog(
           title: const Text('Delete Subject?'),
-          content: Text('Are you sure you want to delete "${subject.code} - ${subject.name}"? All related schedules, assignments, and grades will also be hidden.'),
+          content: Text('Are you sure you want to delete "${subject.code} - ${subject.name}"? All related schedules, notes and assignments will also be hidden.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

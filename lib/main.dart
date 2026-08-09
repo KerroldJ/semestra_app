@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/navigation/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/app_toast.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
 void main() {
@@ -26,6 +27,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode == 'dark' ? ThemeMode.dark : ThemeMode.light,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: appRouter,
     );
   }

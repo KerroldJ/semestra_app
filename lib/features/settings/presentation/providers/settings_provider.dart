@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:semestra_app/core/providers/database_providers.dart';
 import 'package:semestra_app/features/settings/domain/entities/app_settings.dart';
@@ -9,7 +8,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   SettingsNotifier(this._repository)
       : super(const AppSettings(
-          themeMode: 'dark',
+          themeMode: 'light',
           notificationsEnabled: true,
           pomodoroFocusDuration: 25,
           pomodoroShortBreak: 5,
@@ -19,7 +18,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
             '/semesters',
             '/subjects',
             '/schedule',
-            '/notes'
+            '/planner'
           ],
         )) {
     loadSettings();

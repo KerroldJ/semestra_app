@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -32,7 +32,11 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Drop all tables
+    // Best-effort migration of the three legacy "work item" tables into the
+    // unified `items` table before we drop everything and recreate.
+    await _migrateLegacyItems(db);
+
+    // Drop all legacy / removed tables.
     await db.execute('DROP TABLE IF EXISTS settings');
     await db.execute('DROP TABLE IF EXISTS readings');
     await db.execute('DROP TABLE IF EXISTS expenses');
@@ -45,9 +49,105 @@ class DatabaseHelper {
     await db.execute('DROP TABLE IF EXISTS schedules');
     await db.execute('DROP TABLE IF EXISTS subjects');
     await db.execute('DROP TABLE IF EXISTS semesters');
-    
-    // Recreate
+    await db.execute('DROP TABLE IF EXISTS workspace_items');
+
+    // Recreate current schema.
     await _createDB(db, newVersion);
+
+    // Restore migrated rows if we captured any.
+    await _restoreLegacyItems(db);
+  }
+
+  // Holds migrated rows between drop and recreate.
+  List<Map<String, dynamic>> _migratedItems = const [];
+
+  Future<void> _migrateLegacyItems(Database db) async {
+    final migrated = <Map<String, dynamic>>[];
+
+    Future<List<Map<String, dynamic>>> safeQuery(String table) async {
+      try {
+        return await db.query(table);
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    // Notes -> type 0
+    for (final n in await safeQuery('notes')) {
+      migrated.add({
+        'id': n['id'],
+        'type': 0,
+        'subject_id': n['subject_id'],
+        'title': n['title'] ?? '',
+        'content': n['content'] ?? '',
+        'notes': '',
+        'tags': n['tags'] ?? '',
+        'due_date': null,
+        'priority': 0,
+        'status': 0,
+        'created_at': n['created_at'],
+        'updated_at': n['updated_at'],
+        'deleted_at': n['deleted_at'],
+      });
+    }
+
+    // Daily tasks -> type 1
+    for (final t in await safeQuery('daily_tasks')) {
+      migrated.add({
+        'id': t['id'],
+        'type': 1,
+        'subject_id': null,
+        'title': t['title'] ?? '',
+        'content': t['description'] ?? '',
+        'notes': '',
+        'tags': '',
+        'due_date': t['due_date'],
+        'priority': t['priority'] ?? 0,
+        'status': ((t['is_completed'] ?? 0) == 1) ? 2 : 0,
+        'created_at': t['created_at'],
+        'updated_at': t['updated_at'],
+        'deleted_at': t['deleted_at'],
+      });
+    }
+
+    // Assignments -> type 2
+    for (final a in await safeQuery('assignments')) {
+      migrated.add({
+        'id': a['id'],
+        'type': 2,
+        'subject_id': a['subject_id'],
+        'title': a['title'] ?? '',
+        'content': a['description'] ?? '',
+        'notes': a['notes'] ?? '',
+        'tags': '',
+        'due_date': a['due_date'],
+        'priority': a['priority'] ?? 0,
+        'status': a['status'] ?? 0,
+        'created_at': a['created_at'],
+        'updated_at': a['updated_at'],
+        'deleted_at': a['deleted_at'],
+      });
+    }
+
+    _migratedItems = migrated;
+  }
+
+  Future<void> _restoreLegacyItems(Database db) async {
+    if (_migratedItems.isEmpty) return;
+    try {
+      // Foreign keys off during bulk restore to avoid subject-ordering issues.
+      await db.execute('PRAGMA foreign_keys = OFF');
+      final batch = db.batch();
+      for (final row in _migratedItems) {
+        batch.insert('items', row, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+      await db.execute('PRAGMA foreign_keys = ON');
+    } catch (_) {
+      // If restore fails the app still works with an empty items table.
+    } finally {
+      _migratedItems = const [];
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -107,131 +207,23 @@ class DatabaseHelper {
       )
     ''');
 
-    // Assignments table
+    // Unified items table (notes = 0, tasks = 1, assignments = 2)
     await db.execute('''
-      CREATE TABLE assignments (
+      CREATE TABLE items (
         id $idType,
-        subject_id $textType,
-        title $textType,
-        description $textType,
-        due_date $textType,
-        priority $integerType,
-        status $integerType,
-        notes $textType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType,
-        FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Notes table
-    await db.execute('''
-      CREATE TABLE notes (
-        id $idType,
-        subject_id $textType,
+        type $integerType,
+        subject_id $textNullableType,
         title $textType,
         content $textType,
+        notes $textType,
         tags $textType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType,
-        FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Exams table
-    await db.execute('''
-      CREATE TABLE exams (
-        id $idType,
-        subject_id $textType,
-        title $textType,
-        scheduled_date $textType,
-        coverage $textType,
-        notes $textType,
-        type $integerType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType,
-        FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Study sessions table
-    await db.execute('''
-      CREATE TABLE study_sessions (
-        id $idType,
-        subject_id $textNullableType,
-        duration_seconds $integerType,
-        session_type $integerType,
-        completed_at $textType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType
-      )
-    ''');
-
-    // Daily tasks table
-    await db.execute('''
-      CREATE TABLE daily_tasks (
-        id $idType,
-        title $textType,
-        description $textType,
-        due_date $textType,
-        is_completed $integerType,
+        due_date $textNullableType,
         priority $integerType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType
-      )
-    ''');
-
-    // Grades table
-    await db.execute('''
-      CREATE TABLE grades (
-        id $idType,
-        subject_id $textType,
-        assessment_name $textType,
-        weight $realType,
-        score_obtained $realType,
-        score_max $realType,
-        grade_letter $textType,
+        status $integerType,
         created_at $textType,
         updated_at $textType,
         deleted_at $textNullableType,
         FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Expenses table
-    await db.execute('''
-      CREATE TABLE expenses (
-        id $idType,
-        category $textType,
-        amount $realType,
-        date $textType,
-        description $textType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType
-      )
-    ''');
-
-    // Readings table
-    await db.execute('''
-      CREATE TABLE readings (
-        id $idType,
-        title $textType,
-        author $textType,
-        file_path $textNullableType,
-        format $integerType,
-        total_pages $integerType,
-        current_page $integerType,
-        status $integerType,
-        notes $textType,
-        created_at $textType,
-        updated_at $textType,
-        deleted_at $textNullableType
       )
     ''');
 
@@ -244,11 +236,8 @@ class DatabaseHelper {
     ''');
 
     // Default settings
-    await db.insert('settings', {'key': 'theme_mode', 'value': 'dark'});
+    await db.insert('settings', {'key': 'theme_mode', 'value': 'light'});
     await db.insert('settings', {'key': 'notifications_enabled', 'value': 'true'});
-    await db.insert('settings', {'key': 'pomodoro_focus_duration', 'value': '25'});
-    await db.insert('settings', {'key': 'pomodoro_short_break', 'value': '5'});
-    await db.insert('settings', {'key': 'pomodoro_long_break', 'value': '15'});
   }
 
   Future<void> close() async {

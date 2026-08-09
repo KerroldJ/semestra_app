@@ -3,17 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:semestra_app/core/widgets/lottie_header.dart';
+
 // Providers
 import 'package:semestra_app/features/semester/presentation/providers/semester_provider.dart';
 import 'package:semestra_app/features/subject/presentation/providers/subject_provider.dart';
 import 'package:semestra_app/features/schedule/presentation/providers/schedule_provider.dart';
-import 'package:semestra_app/features/assignment/presentation/providers/assignment_provider.dart';
-import 'package:semestra_app/features/note/presentation/providers/note_provider.dart';
-import 'package:semestra_app/features/exam/presentation/providers/exam_provider.dart';
-import 'package:semestra_app/features/study_timer/presentation/providers/study_session_provider.dart';
-
-// Themes
-import 'package:semestra_app/core/theme/app_theme.dart';
+import 'package:semestra_app/features/item/presentation/providers/item_provider.dart';
+import 'package:semestra_app/features/item/domain/entities/item_entity.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -22,21 +19,28 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final currentDayOfWeek = DateTime.now().weekday; // 1 = Monday, 7 = Sunday
-    
-    final semesterState = ref.watch(semesterNotifierProvider);
+
+    // Ensure these providers stay alive so their data is ready across the app.
+    ref.watch(semesterNotifierProvider);
     final subjectState = ref.watch(subjectNotifierProvider);
     final scheduleState = ref.watch(scheduleNotifierProvider);
-    final assignmentState = ref.watch(assignmentNotifierProvider);
-    final notesState = ref.watch(noteNotifierProvider);
-    final examsState = ref.watch(examNotifierProvider);
-    final studyState = ref.watch(studySessionHistoryProvider);
+    final itemsState = ref.watch(itemNotifierProvider);
 
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Gorgeous Greeting Banner
+            const SliverToBoxAdapter(
+              child: LottieHeader(
+                url: 'https://assets10.lottiefiles.com/packages/lf20_1a8dx7zj.json',
+                title: 'Hey there! 👋',
+                subtitle: 'Let\'s make today productive',
+                height: 110,
+                fallbackIcon: Icons.emoji_emotions_rounded,
+              ),
+            ),
+            // Greeting Banner
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
@@ -61,33 +65,18 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
 
-            // Top Summary cards row (GPA, Study Sessions, Total Classes Today)
+            // Top summary cards
             SliverToBoxAdapter(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   children: [
-                    // Study sessions card
-                    studyState.when(
-                      data: (sessions) {
-                        final count = sessions.where((s) => s.sessionType == 0).length;
-                        return _HeaderQuickStatCard(
-                          title: 'Study Logs',
-                          value: '$count Sessions',
-                          icon: Icons.timer_rounded,
-                          color: const Color(0xFF6366F1),
-                        );
-                      },
-                      loading: () => const _LoadingStatCard(),
-                      error: (_, __) => const _LoadingStatCard(),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Assignments remaining card
-                    assignmentState.when(
-                      data: (assigns) {
-                        final pending = assigns.where((a) => a.status != 2).length;
+                    itemsState.when(
+                      data: (items) {
+                        final pending = items
+                            .where((i) => i.type == ItemType.assignment && i.status != 2)
+                            .length;
                         return _HeaderQuickStatCard(
                           title: 'Assignments',
                           value: '$pending Pending',
@@ -99,16 +88,31 @@ class DashboardPage extends ConsumerWidget {
                       error: (_, __) => const _LoadingStatCard(),
                     ),
                     const SizedBox(width: 16),
-
-                    // Exams remaining card
-                    examsState.when(
-                      data: (exams) {
-                        final upcoming = exams.where((e) => e.scheduledDate.isAfter(DateTime.now())).length;
+                    itemsState.when(
+                      data: (items) {
+                        final openTasks = items
+                            .where((i) => i.type == ItemType.task && i.status != 2)
+                            .length;
                         return _HeaderQuickStatCard(
-                          title: 'Exams Scheduled',
-                          value: '$upcoming Upcoming',
-                          icon: Icons.quiz_rounded,
-                          color: const Color(0xFFF59E0B),
+                          title: 'Tasks',
+                          value: '$openTasks To Do',
+                          icon: Icons.checklist_rounded,
+                          color: const Color(0xFF6366F1),
+                        );
+                      },
+                      loading: () => const _LoadingStatCard(),
+                      error: (_, __) => const _LoadingStatCard(),
+                    ),
+                    const SizedBox(width: 16),
+                    itemsState.when(
+                      data: (items) {
+                        final notes =
+                            items.where((i) => i.type == ItemType.note).length;
+                        return _HeaderQuickStatCard(
+                          title: 'Notes',
+                          value: '$notes Saved',
+                          icon: Icons.sticky_note_2_rounded,
+                          color: const Color(0xFF10B981),
                         );
                       },
                       loading: () => const _LoadingStatCard(),
@@ -119,7 +123,6 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
 
-            // Main dashboard content sections
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               sliver: SliverList(
@@ -131,7 +134,8 @@ class DashboardPage extends ConsumerWidget {
                   const SizedBox(height: 12),
                   scheduleState.when(
                     data: (schedules) {
-                      final todayClasses = schedules.where((s) => s.dayOfWeek == currentDayOfWeek).toList();
+                      final todayClasses =
+                          schedules.where((s) => s.dayOfWeek == currentDayOfWeek).toList();
                       todayClasses.sort((a, b) => a.startTime.compareTo(b.startTime));
 
                       if (todayClasses.isEmpty) {
@@ -170,12 +174,15 @@ class DashboardPage extends ConsumerWidget {
                   const SizedBox(height: 24),
 
                   // Upcoming assignments
-                  _buildSectionHeader(context, "Upcoming Assignments", () => context.go('/assignments')),
+                  _buildSectionHeader(context, "Upcoming Assignments", () => context.go('/planner')),
                   const SizedBox(height: 12),
-                  assignmentState.when(
-                    data: (assigns) {
-                      final activeAssigns = assigns.where((a) => a.status != 2).toList();
-                      activeAssigns.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+                  itemsState.when(
+                    data: (items) {
+                      final activeAssigns = items
+                          .where((i) => i.type == ItemType.assignment && i.status != 2)
+                          .toList();
+                      activeAssigns.sort((a, b) => (a.dueDate ?? DateTime(2100))
+                          .compareTo(b.dueDate ?? DateTime(2100)));
 
                       if (activeAssigns.isEmpty) {
                         return const _DashboardEmptyCard(
@@ -187,15 +194,24 @@ class DashboardPage extends ConsumerWidget {
                       return Column(
                         children: activeAssigns.take(2).map((a) {
                           final subjects = subjectState.value ?? [];
-                          final sub = subjects.firstWhere((s) => s.id == a.subjectId, orElse: () => subjects.first);
+                          final sub = subjects.firstWhere(
+                            (s) => s.id == a.subjectId,
+                            orElse: () => subjects.first,
+                          );
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
                               title: Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Due: ${DateFormat('MMM d').format(a.dueDate)} | ${sub.code}'),
+                              subtitle: Text(
+                                a.dueDate != null
+                                    ? 'Due: ${DateFormat('MMM d').format(a.dueDate!)} | ${sub.code}'
+                                    : sub.code,
+                              ),
                               trailing: Icon(
                                 Icons.circle,
-                                color: a.priority == 2 ? Colors.red : (a.priority == 1 ? Colors.orange : Colors.green),
+                                color: a.priority == 2
+                                    ? Colors.red
+                                    : (a.priority == 1 ? Colors.orange : Colors.green),
                                 size: 12,
                               ),
                             ),
@@ -208,11 +224,12 @@ class DashboardPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // Recent lecture notes
-                  _buildSectionHeader(context, "Recently Accessed Notes", () => context.go('/notes')),
+                  // Recent notes
+                  _buildSectionHeader(context, "Recently Accessed Notes", () => context.go('/planner')),
                   const SizedBox(height: 12),
-                  notesState.when(
-                    data: (notes) {
+                  itemsState.when(
+                    data: (items) {
+                      final notes = items.where((i) => i.type == ItemType.note).toList();
                       if (notes.isEmpty) {
                         return const _DashboardEmptyCard(
                           message: 'No study notes recorded yet.',
@@ -223,7 +240,10 @@ class DashboardPage extends ConsumerWidget {
                       return Column(
                         children: notes.take(3).map((n) {
                           final subjects = subjectState.value ?? [];
-                          final sub = subjects.firstWhere((s) => s.id == n.subjectId, orElse: () => subjects.first);
+                          final sub = subjects.firstWhere(
+                            (s) => s.id == n.subjectId,
+                            orElse: () => subjects.first,
+                          );
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
@@ -254,15 +274,9 @@ class DashboardPage extends ConsumerWidget {
       children: [
         Text(
           title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        TextButton(
-          onPressed: onTap,
-          child: const Text('View All'),
-        ),
+        TextButton(onPressed: onTap, child: const Text('View All')),
       ],
     );
   }
@@ -304,16 +318,10 @@ class _HeaderQuickStatCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 2),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
-          ),
+          Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       ),
     );
@@ -359,10 +367,7 @@ class _DashboardEmptyCard extends StatelessWidget {
             Icon(icon, color: Colors.grey, size: 28),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.grey, fontSize: 13)),
             ),
           ],
         ),
