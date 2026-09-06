@@ -29,6 +29,7 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<List<ScheduleEntity>>> {
     required String endTime,
     required String classroom,
     required String instructor,
+    int type = 0,
   }) async {
     final newSchedule = ScheduleEntity(
       id: const Uuid().v4(),
@@ -38,6 +39,7 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<List<ScheduleEntity>>> {
       endTime: endTime,
       classroom: classroom,
       instructor: instructor,
+      type: type,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

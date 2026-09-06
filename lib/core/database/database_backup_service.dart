@@ -9,7 +9,8 @@ class DatabaseBackupService {
     'subjects',
     'schedules',
     'items',
-    'settings'
+    'settings',
+    'user_profile',
   ];
 
   /// Exports all database tables to a JSON string and writes to a file in documents directory

@@ -1,0 +1,7 @@
+{
+  "//": "Copy this file to dart_defines.json and paste your OAuth client IDs.",
+  "//web": "GOOGLE_CLIENT_ID is the Web OAuth client id (also used on web/iOS).",
+  "//server": "GOOGLE_SERVER_CLIENT_ID is the Web client id used as serverClientId — REQUIRED on Android for google_sign_in v7 (Credential Manager).",
+  "GOOGLE_CLIENT_ID": "1004283967487-a7njsc97i6msc88u3dmqogisif0mbqbi.apps.googleusercontent.com",
+  "GOOGLE_SERVER_CLIENT_ID": "1004283967487-a7njsc97i6msc88u3dmqogisif0mbqbi.apps.googleusercontent.com"
+}

@@ -6,7 +6,10 @@ import 'package:semestra_app/features/item/presentation/providers/item_provider.
 import 'package:semestra_app/features/subject/presentation/providers/subject_provider.dart';
 
 class NoteEditorPage extends ConsumerStatefulWidget {
-  const NoteEditorPage({super.key});
+  /// When non-null the editor updates this existing note instead of creating a
+  /// new one (opened from the Notes list via `/notes/edit` with `extra`).
+  final ItemEntity? note;
+  const NoteEditorPage({super.key, this.note});
 
   @override
   ConsumerState<NoteEditorPage> createState() => _NoteEditorPageState();
@@ -17,6 +20,19 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   final _contentController = TextEditingController();
   String? _selectedSubjectId;
   bool _isSaved = false;
+
+  bool get _isEditing => widget.note != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final note = widget.note;
+    if (note != null) {
+      _titleController.text = note.title;
+      _contentController.text = note.content;
+      _selectedSubjectId = note.subjectId;
+    }
+  }
 
   @override
   void dispose() {
@@ -40,15 +56,26 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     }
 
     final finalTitle = title.isEmpty ? 'Untitled Note' : title;
-
-    ref.read(itemNotifierProvider.notifier).addItem(
-          type: ItemType.note,
-          subjectId: subjectId,
-          title: finalTitle,
-          content: content,
-        );
-
     _isSaved = true;
+
+    final existing = widget.note;
+    if (existing != null) {
+      ref.read(itemNotifierProvider.notifier).editItem(
+            existing.copyWith(
+              title: finalTitle,
+              content: content,
+              subjectId: subjectId,
+            ),
+            silent: true,
+          );
+    } else {
+      ref.read(itemNotifierProvider.notifier).addItem(
+            type: ItemType.note,
+            subjectId: subjectId,
+            title: finalTitle,
+            content: content,
+          );
+    }
   }
 
   void _saveAndPop() {
@@ -78,7 +105,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             icon: const Icon(Icons.arrow_back),
             onPressed: _saveAndPop,
           ),
-          title: const Text('New Note', style: TextStyle(fontWeight: FontWeight.normal)),
+          title: Text(_isEditing ? 'Edit Note' : 'New Note',
+              style: const TextStyle(fontWeight: FontWeight.normal)),
           actions: [
             PopupMenuButton<String>(
               onSelected: (val) {

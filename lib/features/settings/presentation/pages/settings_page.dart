@@ -1,219 +1,479 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/settings_provider.dart';
-import '../../../../core/database/database_backup_service.dart';
-import '../../../../core/widgets/lottie_header.dart';
 
-class SettingsPage extends ConsumerWidget {
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_toast.dart';
+import '../../../../core/database/database_backup_service.dart';
+import '../../../auth/presentation/auth_provider.dart';
+import '../providers/settings_provider.dart';
+
+/// Screen 18 — Settings. Account (signed-in-as + sign out), Appearance,
+/// Reminders, Semester, and the offline "Your data" story (export / restore).
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsNotifierProvider);
-    final theme = Theme.of(context);
-    final restoreController = TextEditingController();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
 
-    final availableOptions = [
-      {'route': '/dashboard', 'label': 'Dashboard', 'icon': Icons.dashboard_rounded},
-      {'route': '/semesters', 'label': 'Semesters', 'icon': Icons.calendar_month_rounded},
-      {'route': '/subjects', 'label': 'Subjects', 'icon': Icons.book_rounded},
-      {'route': '/schedule', 'label': 'Schedule', 'icon': Icons.schedule_rounded},
-      {'route': '/planner', 'label': 'Planner', 'icon': Icons.auto_awesome_rounded},
-    ];
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  final _restoreController = TextEditingController();
+
+  @override
+  void dispose() {
+    _restoreController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsNotifierProvider);
+    final profile = ref.watch(authNotifierProvider).profile;
+    final isDark = settings.themeMode == 'dark';
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-        children: [
-          const LottieHeader(
-            url: 'https://assets9.lottiefiles.com/packages/lf20_yd8fbnml.json',
-            title: 'Settings',
-            subtitle: 'Make Semestra yours',
-            height: 100,
-            fallbackIcon: Icons.settings_suggest_rounded,
-          ),
-          const SizedBox(height: 8),
-          // Theme Settings Card
-          _buildSectionHeader(context, 'Aesthetics & Theme'),
-          Card(
-            child: ListTile(
-              leading: Icon(
-                settings.themeMode == 'dark' ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                color: theme.colorScheme.primary,
-              ),
-              title: const Text('Dark Mode Theme'),
-              subtitle: Text(settings.themeMode == 'dark' ? 'Sleek OLED colors' : 'Clean paper theme'),
-              trailing: Switch(
-                value: settings.themeMode == 'dark',
-                onChanged: (_) {
-                  ref.read(settingsNotifierProvider.notifier).toggleThemeMode();
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Floating Menu Layout Card
-          _buildSectionHeader(context, 'Floating Menu Layout'),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      appBar: AppBar(title: const Text('Settings')),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+          children: [
+            // ---- Account ----
+            _Section(
+              label: 'Account',
               child: Column(
-                children: List.generate(5, (index) {
-                  final currentRoute = settings.mainTabRoutes.length > index
-                      ? settings.mainTabRoutes[index]
-                      : ['/dashboard', '/semesters', '/subjects', '/schedule', '/planner'][index];
-
-                  return Column(
-                    children: [
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                        title: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: currentRoute,
-                            isExpanded: true,
-                            icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                            items: availableOptions.map((opt) {
-                              return DropdownMenuItem<String>(
-                                value: opt['route'] as String,
-                                child: Row(
-                                  children: [
-                                    Icon(opt['icon'] as IconData, size: 20, color: theme.colorScheme.primary),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      opt['label'] as String,
-                                      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                final newRoutes = List<String>.from(settings.mainTabRoutes);
-                                while (newRoutes.length < 5) {
-                                  newRoutes.add('');
-                                }
-                                newRoutes[index] = val;
-
-                                // Self-correcting swap logic to avoid duplicates
-                                final existingIndex = settings.mainTabRoutes.indexOf(val);
-                                if (existingIndex != -1 && existingIndex != index) {
-                                  newRoutes[existingIndex] = currentRoute;
-                                }
-
-                                ref.read(settingsNotifierProvider.notifier).updateMainTabRoutes(newRoutes);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                      if (index < 4) const Divider(height: 1),
-                    ],
-                  );
-                }),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Offline Database backup settings
-          _buildSectionHeader(context, 'Offline Backup & Sync'),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Backup operations are entirely local to your device, preserving your data privacy.',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
                   Row(
                     children: [
+                      _Avatar(profile?.photoUrl, profile?.displayName ?? '?'),
+                      const SizedBox(width: 14),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            try {
-                              final path = await DatabaseBackupService.exportBackup();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Backup written to: $path')),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to backup: $e')),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.download_rounded),
-                          label: const Text('Export File'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile?.username?.isNotEmpty == true
+                                  ? '@${profile!.username}'
+                                  : (profile?.displayName ?? 'Signed in'),
+                              style: Theme.of(context).textTheme.titleMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (profile?.email.isNotEmpty == true)
+                              Text(profile!.email,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Restore from JSON Backup String:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: restoreController,
-                    decoration: const InputDecoration(
-                      hintText: 'Paste backup JSON here...',
-                      border: OutlineInputBorder(),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _confirmSignOut,
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: const Text('Sign out'),
                     ),
-                    maxLines: 4,
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                    onPressed: () async {
-                      final jsonStr = restoreController.text.trim();
-                      if (jsonStr.isNotEmpty) {
-                        final success = await DatabaseBackupService.restoreBackupFromJson(jsonStr);
-                        if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Database restored successfully! Restart app to load.')),
-                          );
-                          restoreController.clear();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to parse backup JSON. Please verify copy.')),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.upload_rounded),
-                    label: const Text('Restore Data'),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 6, top: 4),
-      child: Text(
-        title,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: theme.colorScheme.primary,
+            // ---- Appearance ----
+            _Section(
+              label: 'Appearance',
+              child: Column(
+                children: [
+                  _SwitchTile(
+                    icon: isDark
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    title: 'Dark mode',
+                    subtitle: isDark ? 'Warm dark neutrals' : 'Clean warm paper',
+                    value: isDark,
+                    onChanged: (_) => ref
+                        .read(settingsNotifierProvider.notifier)
+                        .toggleThemeMode(),
+                  ),
+                  const _HairlineDivider(),
+                  _ChoiceTile(
+                    icon: Icons.format_size_rounded,
+                    title: 'Text size',
+                    value: _textSizeLabel(settings.textSize),
+                    onTap: _pickTextSize,
+                  ),
+                ],
+              ),
+            ),
+
+            // ---- Reminders ----
+            _Section(
+              label: 'Reminders',
+              child: _SwitchTile(
+                icon: Icons.notifications_none_rounded,
+                title: 'Notifications',
+                subtitle: 'Nudges for upcoming deadlines',
+                value: settings.notificationsEnabled,
+                onChanged: (v) => ref
+                    .read(settingsNotifierProvider.notifier)
+                    .toggleNotifications(v),
+              ),
+            ),
+
+            // ---- Semester ----
+            _Section(
+              label: 'Semester',
+              child: _ChoiceTile(
+                icon: Icons.view_week_rounded,
+                title: 'Week starts on',
+                value: _weekdayLabel(settings.weekStartsOn),
+                onTap: _pickWeekStart,
+              ),
+            ),
+
+            // ---- Your data (offline) ----
+            _Section(
+              label: 'Your data',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Everything stays on this device. Back up or restore your '
+                    'semesters, subjects, notes and tasks as a local file.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _exportBackup,
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('Export backup file'),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const _HairlineDivider(),
+                  const SizedBox(height: 14),
+                  Text('Restore from a backup',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _restoreController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      hintText: 'Paste backup JSON here…',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _restoreBackup,
+                      icon: const Icon(Icons.upload_rounded, size: 18),
+                      label: const Text('Restore data'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            Center(
+              child: Text('Semestra · offline-first',
+                  style: Theme.of(context).textTheme.bodySmall),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  // ---- Actions ----
+
+  Future<void> _confirmSignOut() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+            'Your data stays on this device. You can sign back in anytime.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sign out')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref.read(authNotifierProvider.notifier).signOut();
+      // The router's auth gate redirects to /welcome once signed out.
+    }
+  }
+
+  Future<void> _exportBackup() async {
+    try {
+      final path = await DatabaseBackupService.exportBackup();
+      AppToast.success('Backup written to: $path');
+    } catch (e) {
+      AppToast.error('Backup failed: $e');
+    }
+  }
+
+  Future<void> _restoreBackup() async {
+    final jsonStr = _restoreController.text.trim();
+    if (jsonStr.isEmpty) {
+      AppToast.error('Paste a backup first.');
+      return;
+    }
+    final success = await DatabaseBackupService.restoreBackupFromJson(jsonStr);
+    if (success) {
+      _restoreController.clear();
+      AppToast.success('Restored. Restart the app to load your data.');
+    } else {
+      AppToast.error('Could not parse that backup. Check the copy.');
+    }
+  }
+
+  Future<void> _pickTextSize() async {
+    const options = ['small', 'default', 'large'];
+    final picked = await _pickOne(
+      title: 'Text size',
+      options: options.map((o) => (o, _textSizeLabel(o))).toList(),
+      current: ref.read(settingsNotifierProvider).textSize,
+    );
+    if (picked != null) {
+      ref.read(settingsNotifierProvider.notifier).setTextSize(picked);
+    }
+  }
+
+  Future<void> _pickWeekStart() async {
+    final options = [1, 6, 7];
+    final picked = await _pickOne(
+      title: 'Week starts on',
+      options: options.map((d) => (d, _weekdayLabel(d))).toList(),
+      current: ref.read(settingsNotifierProvider).weekStartsOn,
+    );
+    if (picked != null) {
+      ref.read(settingsNotifierProvider.notifier).setWeekStartsOn(picked);
+    }
+  }
+
+  Future<T?> _pickOne<T>({
+    required String title,
+    required List<(T, String)> options,
+    required T current,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(title, style: Theme.of(ctx).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            ...options.map((o) => ListTile(
+                  title: Text(o.$2),
+                  trailing: o.$1 == current
+                      ? const Icon(Icons.check_rounded, color: AppTheme.gold)
+                      : null,
+                  onTap: () => Navigator.pop(ctx, o.$1),
+                )),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _textSizeLabel(String v) {
+    switch (v) {
+      case 'small':
+        return 'Small';
+      case 'large':
+        return 'Large';
+      default:
+        return 'Default';
+    }
+  }
+
+  static String _weekdayLabel(int d) {
+    switch (d) {
+      case 6:
+        return 'Saturday';
+      case 7:
+        return 'Sunday';
+      default:
+        return 'Monday';
+    }
+  }
+}
+
+/// A labelled section: an [Eyebrow]-style label above a hairline-bordered card.
+class _Section extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _Section({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.9,
+              color: AppTheme.inkMuted,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkElevated : AppTheme.elevated,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.hairline),
+            ),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const _SwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 22, color: AppTheme.inkMuted),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+        Switch(
+          value: value,
+          activeThumbColor: AppTheme.gold,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class _ChoiceTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+  const _ChoiceTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: AppTheme.inkMuted),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            ),
+            Text(value,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppTheme.goldDeep)),
+            const Icon(Icons.chevron_right_rounded,
+                size: 20, color: AppTheme.inkFaint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HairlineDivider extends StatelessWidget {
+  const _HairlineDivider();
+  @override
+  Widget build(BuildContext context) =>
+      const Divider(height: 24, color: AppTheme.hairline, thickness: 1);
+}
+
+class _Avatar extends StatelessWidget {
+  final String? url;
+  final String name;
+  const _Avatar(this.url, this.name);
+
+  @override
+  Widget build(BuildContext context) {
+    if (url != null && url!.isNotEmpty) {
+      return CircleAvatar(radius: 26, backgroundImage: NetworkImage(url!));
+    }
+    return Container(
+      width: 52,
+      height: 52,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppTheme.gold, width: 1.4),
+      ),
+      child: Text(
+        AppTheme.initials(name),
+        style: const TextStyle(
+          fontFamily: AppTheme.fontFamily,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.goldDeep,
+          fontSize: 18,
+        ),
+      ),
+    );
+  }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -15,16 +16,25 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
+      debugPrint('DBDIAG: opening db at "$path" (kIsWeb=$kIsWeb)');
 
-    return await openDatabase(
-      path,
-      version: 4,
-      onCreate: _createDB,
-      onUpgrade: _onUpgrade,
-      onConfigure: _onConfigure,
-    );
+      final db = await openDatabase(
+        path,
+        version: 6,
+        onCreate: _createDB,
+        onUpgrade: _onUpgrade,
+        onConfigure: _onConfigure,
+      );
+      debugPrint('DBDIAG: db opened OK');
+      return db;
+    } catch (e, s) {
+      debugPrint('DBDIAG: DB OPEN FAILED: $e');
+      debugPrint('$s');
+      rethrow;
+    }
   }
 
   Future<void> _onConfigure(Database db) async {
@@ -32,9 +42,24 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Best-effort migration of the three legacy "work item" tables into the
-    // unified `items` table before we drop everything and recreate.
+    // v5 -> v6 is purely additive: the semesters/subjects/schedules/items
+    // schema is unchanged, we only add the `user_profile` table. Do the cheap,
+    // non-destructive thing so real user data (subjects, items, schedules) is
+    // never dropped on the way to the gated/onboarded build.
+    if (oldVersion >= 5) {
+      await _createUserProfileTable(db);
+      return;
+    }
+
+    // Older databases: fold the three legacy "work item" tables into the
+    // unified `items` table, then also snapshot the current-schema tables so a
+    // full drop/recreate does not lose subjects/semesters/schedules.
     await _migrateLegacyItems(db);
+    _preserved = {
+      'semesters': await _safeQuery(db, 'semesters'),
+      'subjects': await _safeQuery(db, 'subjects'),
+      'schedules': await _safeQuery(db, 'schedules'),
+    };
 
     // Drop all legacy / removed tables.
     await db.execute('DROP TABLE IF EXISTS settings');
@@ -51,11 +76,48 @@ class DatabaseHelper {
     await db.execute('DROP TABLE IF EXISTS semesters');
     await db.execute('DROP TABLE IF EXISTS workspace_items');
 
-    // Recreate current schema.
+    // Recreate current schema (includes user_profile).
     await _createDB(db, newVersion);
 
-    // Restore migrated rows if we captured any.
+    // Restore preserved + migrated rows.
+    await _restorePreserved(db);
     await _restoreLegacyItems(db);
+  }
+
+  static Future<List<Map<String, dynamic>>> _safeQuery(
+      Database db, String table) async {
+    try {
+      // Detach from the live cursor so the rows survive the table drop.
+      return (await db.query(table))
+          .map((r) => Map<String, dynamic>.from(r))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  // Snapshots of current-schema tables held between drop and recreate.
+  Map<String, List<Map<String, dynamic>>> _preserved = const {};
+
+  Future<void> _restorePreserved(Database db) async {
+    if (_preserved.isEmpty) return;
+    try {
+      await db.execute('PRAGMA foreign_keys = OFF');
+      final batch = db.batch();
+      // Insert parents before children (semesters -> subjects -> schedules).
+      for (final table in const ['semesters', 'subjects', 'schedules']) {
+        for (final row in _preserved[table] ?? const []) {
+          batch.insert(table, row,
+              conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      await batch.commit(noResult: true);
+      await db.execute('PRAGMA foreign_keys = ON');
+    } catch (_) {
+      // Non-fatal: app still runs with whatever restored.
+    } finally {
+      _preserved = const {};
+    }
   }
 
   // Holds migrated rows between drop and recreate.
@@ -200,6 +262,7 @@ class DatabaseHelper {
         end_time $textType,
         classroom $textType,
         instructor $textType,
+        type $integerType DEFAULT 0,
         created_at $textType,
         updated_at $textType,
         deleted_at $textNullableType,
@@ -238,6 +301,25 @@ class DatabaseHelper {
     // Default settings
     await db.insert('settings', {'key': 'theme_mode', 'value': 'light'});
     await db.insert('settings', {'key': 'notifications_enabled', 'value': 'true'});
+
+    // Single-row local user profile (the sign-in gate).
+    await _createUserProfileTable(db);
+  }
+
+  /// The local identity row created after Google sign-in. Single row, keyed by
+  /// the Google account id. Created on fresh installs and added on the v5->v6
+  /// upgrade. Idempotent.
+  Future<void> _createUserProfileTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS user_profile (
+        google_id TEXT PRIMARY KEY,
+        email TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        photo_url TEXT,
+        username TEXT,
+        onboarded_at TEXT
+      )
+    ''');
   }
 
   Future<void> close() async {

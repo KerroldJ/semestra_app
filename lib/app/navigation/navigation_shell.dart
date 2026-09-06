@@ -1,281 +1,87 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:semestra_app/features/settings/presentation/providers/settings_provider.dart';
-import '../../core/theme/app_theme.dart';
 
-class NavigationShell extends ConsumerWidget {
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/compose_sheet.dart';
+
+/// The 4-tab shell with a center compose ring:
+///   Today · Planner · [ compose ] · Subjects · Notes
+class NavigationShell extends StatelessWidget {
   final Widget child;
 
   const NavigationShell({super.key, required this.child});
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final location = GoRouterState.of(context).uri.toString();
-    final settings = ref.watch(settingsNotifierProvider);
-    final isWide = MediaQuery.of(context).size.width > 900;
-
-    final destinations = [
-      _NavDestination(
-        route: '/dashboard',
-        icon: Icons.dashboard_rounded,
-        label: 'Dashboard',
-        isMainTab: true,
-      ),
-      _NavDestination(
-        route: '/semesters',
-        icon: Icons.calendar_month_rounded,
-        label: 'Semesters',
-        isMainTab: true,
-      ),
-      _NavDestination(
-        route: '/subjects',
-        icon: Icons.book_rounded,
-        label: 'Subjects',
-        isMainTab: true,
-      ),
-      _NavDestination(
-        route: '/schedule',
-        icon: Icons.schedule_rounded,
-        label: 'Schedule',
-        isMainTab: true,
-      ),
-      _NavDestination(
-        route: '/planner',
-        icon: Icons.auto_awesome_rounded,
-        label: 'Planner',
-        isMainTab: true,
-      ),
-      _NavDestination(
-        route: '/settings',
-        icon: Icons.settings_rounded,
-        label: 'Settings',
-        isMainTab: false,
-      ),
-    ];
-
-    if (isWide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            _Sidebar(destinations: destinations, activeRoute: location),
-            const VerticalDivider(width: 1, thickness: 1, color: Colors.grey),
-            Expanded(child: child),
-          ],
-        ),
-      );
-    }
-
-    // Mobile layout
-    final theme = Theme.of(context);
-    final mainDestinations = settings.mainTabRoutes.map((route) {
-      return destinations.firstWhere((d) => d.route == route, orElse: () => destinations.first);
-    }).toList();
-    final activeIndex = mainDestinations.indexWhere((d) => location == d.route);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          destinations.firstWhere((d) => d.route == location, orElse: () => destinations.first).label,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            onPressed: () => context.go('/settings'),
-          ),
-        ],
-      ),
-      drawer: _MobileDrawer(destinations: destinations, activeRoute: location),
-      body: child,
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          height: 70,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF131D30) : Colors.white,
-            borderRadius: BorderRadius.circular(35),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.35 : 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-            border: Border.all(
-              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(mainDestinations.length, (index) {
-              final d = mainDestinations[index];
-              final isActive = activeIndex == index || (activeIndex == -1 && index == 0);
-
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                  child: GestureDetector(
-                    onTap: () => context.go(d.route),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.transparent,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            d.icon,
-                            size: 22,
-                            color: isActive
-                                ? theme.colorScheme.primary
-                                : Colors.grey,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            d.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                              color: isActive
-                                  ? theme.colorScheme.primary
-                                  : Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            width: 16,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? theme.colorScheme.primary
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(1.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavDestination {
-  final String route;
-  final IconData icon;
-  final String label;
-  final bool isMainTab;
-
-  _NavDestination({
-    required this.route,
-    required this.icon,
-    required this.label,
-    required this.isMainTab,
-  });
-}
-
-class _Sidebar extends StatelessWidget {
-  final List<_NavDestination> destinations;
-  final String activeRoute;
-
-  const _Sidebar({required this.destinations, required this.activeRoute});
+  static const _left = [
+    _NavItem('/today', Icons.today_outlined, Icons.today_rounded, 'Today'),
+    _NavItem('/planner', Icons.calendar_view_week_outlined,
+        Icons.calendar_view_week_rounded, 'Planner'),
+  ];
+  static const _right = [
+    _NavItem('/subjects', Icons.menu_book_outlined, Icons.menu_book_rounded,
+        'Subjects'),
+    _NavItem('/notes', Icons.sticky_note_2_outlined,
+        Icons.sticky_note_2_rounded, 'Notes'),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.toString();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      width: 250,
-      color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Logo
-          Padding(
-            padding: const EdgeInsets.only(left: 8, bottom: 24),
+
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkElevated : AppTheme.elevated,
+          border: Border(
+            top: BorderSide(
+                color: isDark
+                    ? Colors.white.withOpacity(0.06)
+                    : AppTheme.hairline),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 64,
             child: Row(
               children: [
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: AppTheme.primaryGradient,
-                  ).createShader(bounds),
-                  child: const Icon(
-                    Icons.school_rounded,
-                    size: 32,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Semestra',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.0,
-                        fontSize: 22,
-                      ),
-                ),
+                for (final t in _left)
+                  Expanded(child: _Tab(item: t, location: location)),
+                _ComposeRing(onTap: () => showComposeSheet(context)),
+                for (final t in _right)
+                  Expanded(child: _Tab(item: t, location: location)),
               ],
             ),
           ),
-          
-          Expanded(
-            child: ListView.builder(
-              itemCount: destinations.length,
-              itemBuilder: (context, index) {
-                final d = destinations[index];
-                final isActive = activeRoute == d.route;
+        ),
+      ),
+    );
+  }
+}
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => context.go(d.route),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: isActive
-                              ? const LinearGradient(colors: AppTheme.primaryGradient)
-                              : null,
-                          color: !isActive && isActive
-                              ? Colors.white10
-                              : null,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            Icon(
-                              d.icon,
-                              color: isActive ? Colors.white : Colors.grey,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              d.label,
-                              style: TextStyle(
-                                color: isActive ? Colors.white : (isDark ? Colors.grey[300] : Colors.grey[700]),
-                                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+class _Tab extends StatelessWidget {
+  final _NavItem item;
+  final String location;
+  const _Tab({required this.item, required this.location});
+
+  @override
+  Widget build(BuildContext context) {
+    final active = location.startsWith(item.route);
+    final color = active ? AppTheme.goldDeep : AppTheme.inkFaint;
+    return InkWell(
+      onTap: () => context.go(item.route),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(active ? item.activeIcon : item.icon, size: 23, color: color),
+          const SizedBox(height: 4),
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+              color: color,
             ),
           ),
         ],
@@ -284,77 +90,40 @@ class _Sidebar extends StatelessWidget {
   }
 }
 
-class _MobileDrawer extends StatelessWidget {
-  final List<_NavDestination> destinations;
-  final String activeRoute;
-
-  const _MobileDrawer({required this.destinations, required this.activeRoute});
+/// The gold outlined compose ring at the center of the bar.
+class _ComposeRing extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ComposeRing({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Drawer(
-      backgroundColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Row(
-                children: [
-                  ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: AppTheme.primaryGradient,
-                    ).createShader(bounds),
-                    child: const Icon(
-                      Icons.school_rounded,
-                      size: 28,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Semestra Workspace',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+    return SizedBox(
+      width: 72,
+      child: Center(
+        child: InkResponse(
+          onTap: onTap,
+          radius: 34,
+          child: Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.gold, width: 2),
             ),
-            const Divider(),
-            Expanded(
-              child: ListView.builder(
-                itemCount: destinations.length,
-                itemBuilder: (context, index) {
-                  final d = destinations[index];
-                  final isActive = activeRoute == d.route;
-
-                  return ListTile(
-                    leading: Icon(
-                      d.icon,
-                      color: isActive ? Theme.of(context).colorScheme.primary : Colors.grey,
-                    ),
-                    title: Text(
-                      d.label,
-                      style: TextStyle(
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                        color: isActive ? Theme.of(context).colorScheme.primary : null,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(d.route);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+            child: const Icon(Icons.add_rounded,
+                size: 26, color: AppTheme.goldDeep),
+          ),
         ),
       ),
     );
   }
+}
+
+class _NavItem {
+  final String route;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  const _NavItem(this.route, this.icon, this.activeIcon, this.label);
 }

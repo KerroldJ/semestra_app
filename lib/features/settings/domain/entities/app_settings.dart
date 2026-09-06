@@ -5,6 +5,10 @@ class AppSettings {
   final int pomodoroShortBreak; // in minutes
   final int pomodoroLongBreak; // in minutes
   final List<String> mainTabRoutes;
+  final int weekStartsOn; // 1 = Monday ... 7 = Sunday
+  final String textSize; // "small", "default", "large"
+  final String userName;
+  final String program; // e.g. "Computer Science"
 
   const AppSettings({
     required this.themeMode,
@@ -13,6 +17,10 @@ class AppSettings {
     required this.pomodoroShortBreak,
     required this.pomodoroLongBreak,
     required this.mainTabRoutes,
+    this.weekStartsOn = 1,
+    this.textSize = 'default',
+    this.userName = 'Student',
+    this.program = 'Computer Science',
   });
 
   AppSettings copyWith({
@@ -22,6 +30,10 @@ class AppSettings {
     int? pomodoroShortBreak,
     int? pomodoroLongBreak,
     List<String>? mainTabRoutes,
+    int? weekStartsOn,
+    String? textSize,
+    String? userName,
+    String? program,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -30,6 +42,21 @@ class AppSettings {
       pomodoroShortBreak: pomodoroShortBreak ?? this.pomodoroShortBreak,
       pomodoroLongBreak: pomodoroLongBreak ?? this.pomodoroLongBreak,
       mainTabRoutes: mainTabRoutes ?? this.mainTabRoutes,
+      weekStartsOn: weekStartsOn ?? this.weekStartsOn,
+      textSize: textSize ?? this.textSize,
+      userName: userName ?? this.userName,
+      program: program ?? this.program,
     );
+  }
+
+  double get textScale {
+    switch (textSize) {
+      case 'small':
+        return 0.9;
+      case 'large':
+        return 1.15;
+      default:
+        return 1.0;
+    }
   }
 }

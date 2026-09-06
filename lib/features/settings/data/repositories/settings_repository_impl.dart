@@ -23,6 +23,10 @@ class SettingsRepositoryImpl implements SettingsRepository {
       pomodoroShortBreak: int.tryParse(settingsMap['pomodoro_short_break'] ?? '5') ?? 5,
       pomodoroLongBreak: int.tryParse(settingsMap['pomodoro_long_break'] ?? '15') ?? 15,
       mainTabRoutes: mainTabRoutes,
+      weekStartsOn: int.tryParse(settingsMap['week_starts_on'] ?? '1') ?? 1,
+      textSize: settingsMap['text_size'] ?? 'default',
+      userName: settingsMap['user_name'] ?? 'Student',
+      program: settingsMap['program'] ?? 'Computer Science',
     );
   }
 
@@ -34,5 +38,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
     await localDataSource.saveSetting('pomodoro_short_break', settings.pomodoroShortBreak.toString());
     await localDataSource.saveSetting('pomodoro_long_break', settings.pomodoroLongBreak.toString());
     await localDataSource.saveSetting('main_tab_routes', settings.mainTabRoutes.join(','));
+    await localDataSource.saveSetting('week_starts_on', settings.weekStartsOn.toString());
+    await localDataSource.saveSetting('text_size', settings.textSize);
+    await localDataSource.saveSetting('user_name', settings.userName);
+    await localDataSource.saveSetting('program', settings.program);
   }
 }

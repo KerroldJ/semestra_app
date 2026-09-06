@@ -8,6 +8,7 @@ class ScheduleModel {
   final String endTime;
   final String classroom;
   final String instructor;
+  final int type;
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
@@ -20,6 +21,7 @@ class ScheduleModel {
     required this.endTime,
     required this.classroom,
     required this.instructor,
+    this.type = 0,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -34,6 +36,7 @@ class ScheduleModel {
       endTime: map['end_time'] as String,
       classroom: map['classroom'] as String,
       instructor: map['instructor'] as String,
+      type: (map['type'] as int?) ?? 0,
       createdAt: map['created_at'] as String,
       updatedAt: map['updated_at'] as String,
       deletedAt: map['deleted_at'] as String?,
@@ -49,6 +52,7 @@ class ScheduleModel {
       'end_time': endTime,
       'classroom': classroom,
       'instructor': instructor,
+      'type': type,
       'created_at': createdAt,
       'updated_at': updatedAt,
       'deleted_at': deletedAt,
@@ -64,6 +68,7 @@ class ScheduleModel {
       endTime: entity.endTime,
       classroom: entity.classroom,
       instructor: entity.instructor,
+      type: entity.type,
       createdAt: entity.createdAt.toIso8601String(),
       updatedAt: entity.updatedAt.toIso8601String(),
       deletedAt: entity.deletedAt?.toIso8601String(),
@@ -79,6 +84,7 @@ class ScheduleModel {
       endTime: endTime,
       classroom: classroom,
       instructor: instructor,
+      type: type,
       createdAt: DateTime.parse(createdAt),
       updatedAt: DateTime.parse(updatedAt),
       deletedAt: deletedAt != null ? DateTime.parse(deletedAt!) : null,

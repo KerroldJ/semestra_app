@@ -1,376 +1,404 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
-import 'package:semestra_app/core/widgets/lottie_header.dart';
-
-// Providers
-import 'package:semestra_app/features/semester/presentation/providers/semester_provider.dart';
-import 'package:semestra_app/features/subject/presentation/providers/subject_provider.dart';
-import 'package:semestra_app/features/schedule/presentation/providers/schedule_provider.dart';
-import 'package:semestra_app/features/item/presentation/providers/item_provider.dart';
-import 'package:semestra_app/features/item/domain/entities/item_entity.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/format.dart';
+import '../../../../core/widgets/common.dart';
+import '../../../item/domain/entities/item_entity.dart';
+import '../../../item/presentation/providers/item_provider.dart';
+import '../../../schedule/domain/entities/schedule_entity.dart';
+import '../../../schedule/presentation/providers/schedule_provider.dart';
+import '../../../subject/domain/entities/subject_entity.dart';
+import '../../../subject/presentation/providers/subject_provider.dart';
+import '../../../settings/presentation/providers/settings_provider.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final currentDayOfWeek = DateTime.now().weekday; // 1 = Monday, 7 = Sunday
+    final now = DateTime.now();
+    final settings = ref.watch(settingsNotifierProvider);
+    final subjects = ref.watch(subjectNotifierProvider).value ?? [];
+    final items = ref.watch(itemNotifierProvider).value ?? [];
+    final schedules = ref.watch(scheduleNotifierProvider).value ?? [];
 
-    // Ensure these providers stay alive so their data is ready across the app.
-    ref.watch(semesterNotifierProvider);
-    final subjectState = ref.watch(subjectNotifierProvider);
-    final scheduleState = ref.watch(scheduleNotifierProvider);
-    final itemsState = ref.watch(itemNotifierProvider);
+    final subjectsById = {for (final s in subjects) s.id: s};
+    final today = now.weekday;
+
+    final todayClasses = schedules
+        .where((s) => s.dayOfWeek == today && s.scheduleType != ScheduleType.study)
+        .toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    // Next upcoming class today.
+    ScheduleEntity? nextUp;
+    int nextUpMinutes = 0;
+    for (final s in todayClasses) {
+      final t = Fmt.parseHHmm(s.startTime);
+      if (t == null) continue;
+      final start = DateTime(now.year, now.month, now.day, t.hour, t.minute);
+      final diff = start.difference(now).inMinutes;
+      if (diff >= 0) {
+        nextUp = s;
+        nextUpMinutes = diff;
+        break;
+      }
+    }
+
+    final open = items.where((i) =>
+        i.type != ItemType.note && !i.isCompleted && i.dueDate != null);
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final dueThisWeek = open.where((i) {
+      final d = i.dueDate!;
+      final diff = DateTime(d.year, d.month, d.day).difference(startOfToday).inDays;
+      return diff >= 0 && diff <= 7;
+    }).length;
+    final overdue = open.where((i) {
+      final d = i.dueDate!;
+      return DateTime(d.year, d.month, d.day).isBefore(startOfToday);
+    }).length;
+
+    final deadlines = open.toList()
+      ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            const SliverToBoxAdapter(
-              child: LottieHeader(
-                url: 'https://assets10.lottiefiles.com/packages/lf20_1a8dx7zj.json',
-                title: 'Hey there! 👋',
-                subtitle: 'Let\'s make today productive',
-                height: 110,
-                fallbackIcon: Icons.emoji_emotions_rounded,
-              ),
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          children: [
+            AppScreenHeader(
+              eyebrow: DateFormat('EEEE, MMM d').format(now),
+              title: 'Dashboard',
+              onSearch: () {},
             ),
-            // Greeting Banner
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome Back, Student!',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('EEEE, MMMM d, yyyy').format(DateTime.now()),
-                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
-                    ),
-                  ],
+            const SizedBox(height: 20),
+            _Greeting(name: settings.userName),
+            const SizedBox(height: 18),
+            _NextUpCard(
+              schedule: nextUp,
+              subject: nextUp == null ? null : subjectsById[nextUp.subjectId],
+              minutes: nextUpMinutes,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: StatTile(
+                    value: '${todayClasses.length}',
+                    label: 'classes today',
+                    color: AppTheme.statPurple,
+                  ),
                 ),
-              ),
-            ),
-
-            // Top summary cards
-            SliverToBoxAdapter(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Row(
-                  children: [
-                    itemsState.when(
-                      data: (items) {
-                        final pending = items
-                            .where((i) => i.type == ItemType.assignment && i.status != 2)
-                            .length;
-                        return _HeaderQuickStatCard(
-                          title: 'Assignments',
-                          value: '$pending Pending',
-                          icon: Icons.assignment_rounded,
-                          color: const Color(0xFFEC4899),
-                        );
-                      },
-                      loading: () => const _LoadingStatCard(),
-                      error: (_, __) => const _LoadingStatCard(),
-                    ),
-                    const SizedBox(width: 16),
-                    itemsState.when(
-                      data: (items) {
-                        final openTasks = items
-                            .where((i) => i.type == ItemType.task && i.status != 2)
-                            .length;
-                        return _HeaderQuickStatCard(
-                          title: 'Tasks',
-                          value: '$openTasks To Do',
-                          icon: Icons.checklist_rounded,
-                          color: const Color(0xFF6366F1),
-                        );
-                      },
-                      loading: () => const _LoadingStatCard(),
-                      error: (_, __) => const _LoadingStatCard(),
-                    ),
-                    const SizedBox(width: 16),
-                    itemsState.when(
-                      data: (items) {
-                        final notes =
-                            items.where((i) => i.type == ItemType.note).length;
-                        return _HeaderQuickStatCard(
-                          title: 'Notes',
-                          value: '$notes Saved',
-                          icon: Icons.sticky_note_2_rounded,
-                          color: const Color(0xFF10B981),
-                        );
-                      },
-                      loading: () => const _LoadingStatCard(),
-                      error: (_, __) => const _LoadingStatCard(),
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatTile(
+                    value: '$dueThisWeek',
+                    label: 'due this week',
+                    color: AppTheme.statOrange,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatTile(
+                    value: '$overdue',
+                    label: 'overdue',
+                    color: AppTheme.statRed,
+                  ),
+                ),
+              ],
             ),
-
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: 12),
-
-                  // Today's classes
-                  _buildSectionHeader(context, "Today's Timetable", () => context.go('/schedule')),
-                  const SizedBox(height: 12),
-                  scheduleState.when(
-                    data: (schedules) {
-                      final todayClasses =
-                          schedules.where((s) => s.dayOfWeek == currentDayOfWeek).toList();
-                      todayClasses.sort((a, b) => a.startTime.compareTo(b.startTime));
-
-                      if (todayClasses.isEmpty) {
-                        return const _DashboardEmptyCard(
-                          message: 'No classes scheduled for today. Time to study or relax!',
-                          icon: Icons.hotel_rounded,
-                        );
-                      }
-
-                      return Column(
-                        children: todayClasses.take(3).map((sch) {
-                          final subjects = subjectState.value ?? [];
-                          final match = subjects.where((s) => s.id == sch.subjectId).toList();
-                          final sub = match.isNotEmpty ? match.first : null;
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.class_rounded,
-                                color: sub != null ? Color(sub.colorValue) : Colors.grey,
-                              ),
-                              title: Text(
-                                sub != null ? '${sub.code}: ${sub.name}' : 'Unknown Subject',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text('${sch.startTime} - ${sch.endTime} @ Room ${sch.classroom}'),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const SizedBox(),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Upcoming assignments
-                  _buildSectionHeader(context, "Upcoming Assignments", () => context.go('/planner')),
-                  const SizedBox(height: 12),
-                  itemsState.when(
-                    data: (items) {
-                      final activeAssigns = items
-                          .where((i) => i.type == ItemType.assignment && i.status != 2)
-                          .toList();
-                      activeAssigns.sort((a, b) => (a.dueDate ?? DateTime(2100))
-                          .compareTo(b.dueDate ?? DateTime(2100)));
-
-                      if (activeAssigns.isEmpty) {
-                        return const _DashboardEmptyCard(
-                          message: 'All caught up! No pending assignments.',
-                          icon: Icons.thumb_up_alt_rounded,
-                        );
-                      }
-
-                      return Column(
-                        children: activeAssigns.take(2).map((a) {
-                          final subjects = subjectState.value ?? [];
-                          final sub = subjects.firstWhere(
-                            (s) => s.id == a.subjectId,
-                            orElse: () => subjects.first,
-                          );
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              title: Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(
-                                a.dueDate != null
-                                    ? 'Due: ${DateFormat('MMM d').format(a.dueDate!)} | ${sub.code}'
-                                    : sub.code,
-                              ),
-                              trailing: Icon(
-                                Icons.circle,
-                                color: a.priority == 2
-                                    ? Colors.red
-                                    : (a.priority == 1 ? Colors.orange : Colors.green),
-                                size: 12,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const SizedBox(),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Recent notes
-                  _buildSectionHeader(context, "Recently Accessed Notes", () => context.go('/planner')),
-                  const SizedBox(height: 12),
-                  itemsState.when(
-                    data: (items) {
-                      final notes = items.where((i) => i.type == ItemType.note).toList();
-                      if (notes.isEmpty) {
-                        return const _DashboardEmptyCard(
-                          message: 'No study notes recorded yet.',
-                          icon: Icons.note_alt_rounded,
-                        );
-                      }
-
-                      return Column(
-                        children: notes.take(3).map((n) {
-                          final subjects = subjectState.value ?? [];
-                          final sub = subjects.firstWhere(
-                            (s) => s.id == n.subjectId,
-                            orElse: () => subjects.first,
-                          );
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: const Icon(Icons.note_rounded, color: Colors.blueAccent),
-                              title: Text(n.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Subject: ${sub.code} | Updated: ${DateFormat('MMM d').format(n.updatedAt)}'),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const SizedBox(),
-                  ),
-                ]),
-              ),
+            const SizedBox(height: 26),
+            SectionHeader(
+              title: "Today's classes",
+              actionLabel: 'View all',
+              onAction: () => context.go('/planner'),
             ),
+            const SizedBox(height: 12),
+            if (todayClasses.isEmpty)
+              const _EmptyHint(text: 'No classes scheduled today.')
+            else
+              ...todayClasses.map((s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _ClassRow(
+                        schedule: s, subject: subjectsById[s.subjectId]),
+                  )),
+            const SizedBox(height: 22),
+            SectionHeader(
+              title: 'Upcoming deadlines',
+              actionLabel: 'View all',
+              onAction: () => context.go('/planner'),
+            ),
+            const SizedBox(height: 12),
+            if (deadlines.isEmpty)
+              const _EmptyHint(text: 'Nothing due — you are all caught up.')
+            else
+              ...deadlines.take(3).map((i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _DeadlineRow(
+                        item: i, subject: subjectsById[i.subjectId]),
+                  )),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildSectionHeader(BuildContext context, String title, VoidCallback onTap) {
-    final theme = Theme.of(context);
+class _Greeting extends StatelessWidget {
+  final String name;
+  const _Greeting({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final greet = hour < 12
+        ? 'Good morning,'
+        : hour < 18
+            ? 'Good afternoon,'
+            : 'Good evening,';
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+        Container(
+          width: 52,
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6D5CE0), Color(0xFF5B57E6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            AppTheme.initials(name),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
         ),
-        TextButton(onPressed: onTap, child: const Text('View All')),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(greet, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 2),
+            Text(name, style: Theme.of(context).textTheme.titleLarge),
+          ],
+        ),
       ],
     );
   }
 }
 
-class _HeaderQuickStatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
+class _NextUpCard extends StatelessWidget {
+  final ScheduleEntity? schedule;
+  final SubjectEntity? subject;
+  final int minutes;
 
-  const _HeaderQuickStatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
+  const _NextUpCard({
+    required this.schedule,
+    required this.subject,
+    required this.minutes,
   });
+
+  String get _eyebrow {
+    if (schedule == null) return 'NOTHING NEXT';
+    if (minutes <= 0) return 'NEXT UP · NOW';
+    if (minutes < 60) return 'NEXT UP · IN $minutes MIN';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return 'NEXT UP · IN ${h}H${m > 0 ? ' ${m}M' : ''}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Container(
-      width: 160,
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: AppTheme.heroGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: color.withOpacity(0.15),
-            foregroundColor: color,
-            child: Icon(icon, size: 18),
-          ),
-          const SizedBox(height: 16),
           Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
+            _eyebrow,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+              fontSize: 11.5,
+              letterSpacing: 1.1,
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          const SizedBox(height: 12),
+          Text(
+            schedule == null
+                ? 'No more classes today'
+                : (subject?.name ?? 'Class'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            schedule == null
+                ? 'Enjoy the rest of your day.'
+                : [
+                    if (schedule!.classroom.isNotEmpty) schedule!.classroom,
+                    if (schedule!.instructor.isNotEmpty) schedule!.instructor,
+                  ].join(' · '),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.72),
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _LoadingStatCard extends StatelessWidget {
-  const _LoadingStatCard();
+class _ClassRow extends StatelessWidget {
+  final ScheduleEntity schedule;
+  final SubjectEntity? subject;
+  const _ClassRow({required this.schedule, required this.subject});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+    final color = subject != null ? Color(subject!.colorValue) : AppTheme.primary;
+    final (time, period) = Fmt.time12Parts(schedule.startTime);
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 14),
+          SizedBox(
+            width: 52,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(time, style: Theme.of(context).textTheme.titleMedium),
+                Text(period, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subject?.name ?? 'Class',
+                    style: Theme.of(context).textTheme.titleMedium),
+                if (schedule.classroom.isNotEmpty)
+                  Text(schedule.classroom,
+                      style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _DashboardEmptyCard extends StatelessWidget {
-  final String message;
-  final IconData icon;
-
-  const _DashboardEmptyCard({required this.message, required this.icon});
+class _DeadlineRow extends StatelessWidget {
+  final ItemEntity item;
+  final SubjectEntity? subject;
+  const _DeadlineRow({required this.item, required this.subject});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.grey, size: 28),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(message, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+    final color = subject != null ? Color(subject!.colorValue) : AppTheme.statRed;
+    final now = DateTime.now();
+    final overdue = item.dueDate != null &&
+        DateTime(item.dueDate!.year, item.dueDate!.month, item.dueDate!.day)
+            .isBefore(DateTime(now.year, now.month, now.day));
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppTheme.soft(color, 0.14),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
+            child: Icon(
+              item.type == ItemType.assignment
+                  ? Icons.assignment_outlined
+                  : Icons.check_box_outlined,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium),
+                if (subject != null)
+                  Text(subject!.name,
+                      style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+          if (item.dueDate != null)
+            Pill(
+              text: Fmt.dueLabel(item.dueDate!),
+              bg: AppTheme.soft(
+                  overdue ? AppTheme.statRed : AppTheme.inkMuted, 0.12),
+              fg: overdue ? AppTheme.statRed : AppTheme.inkMuted,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  final String text;
+  const _EmptyHint({required this.text});
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_outline_rounded,
+              color: AppTheme.inkFaint, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
       ),
     );
   }

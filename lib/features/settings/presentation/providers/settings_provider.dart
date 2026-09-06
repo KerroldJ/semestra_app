@@ -15,11 +15,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           pomodoroLongBreak: 15,
           mainTabRoutes: [
             '/dashboard',
-            '/semesters',
-            '/subjects',
-            '/schedule',
-            '/planner'
+            '/workspace',
+            '/planner',
+            '/progress',
+            '/profile'
           ],
+          weekStartsOn: 1,
+          textSize: 'default',
+          userName: 'Student',
+          program: 'Computer Science',
         )) {
     loadSettings();
   }
@@ -47,8 +51,24 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await updateSettings(state.copyWith(themeMode: mode));
   }
 
+  Future<void> setThemeMode(String mode) async {
+    await updateSettings(state.copyWith(themeMode: mode));
+  }
+
   Future<void> toggleNotifications(bool enabled) async {
     await updateSettings(state.copyWith(notificationsEnabled: enabled));
+  }
+
+  Future<void> setWeekStartsOn(int day) async {
+    await updateSettings(state.copyWith(weekStartsOn: day));
+  }
+
+  Future<void> setTextSize(String size) async {
+    await updateSettings(state.copyWith(textSize: size));
+  }
+
+  Future<void> updateProfile({String? userName, String? program}) async {
+    await updateSettings(state.copyWith(userName: userName, program: program));
   }
 
   Future<void> updateMainTabRoutes(List<String> routes) async {
