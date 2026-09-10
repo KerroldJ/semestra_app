@@ -1,54 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:semestra_app/core/utils/app_toast.dart';
-import 'package:semestra_app/features/semester/presentation/providers/semester_provider.dart';
-import 'package:semestra_app/features/semester/domain/entities/semester_entity.dart';
-import 'package:semestra_app/core/theme/app_theme.dart';
 
+import '../../../../app/navigation/navigation_shell.dart' show fabHiddenNotifier;
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_toast.dart';
+import '../../../../core/widgets/common.dart';
+import '../../../subject/presentation/providers/subject_provider.dart';
+import '../../domain/entities/semester_entity.dart';
+import '../providers/semester_provider.dart';
+
+/// Screen — Semesters Management Tab.
+/// Allows viewing, activating, editing, deleting, and creating semesters.
 class SemesterPage extends ConsumerWidget {
   const SemesterPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(semesterNotifierProvider);
+    final semestersState = ref.watch(semesterNotifierProvider);
+    final subjects = ref.watch(subjectNotifierProvider).value ?? [];
     final theme = Theme.of(context);
+    final now = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Semesters'),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      ),
-      body: state.when(
-        data: (semesters) {
-          if (semesters.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40.0),
-                child: Text(
-                  'No semesters added yet. Create one to begin organizing subjects!',
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
+      body: SafeArea(
+        bottom: false,
+        child: semestersState.when(
+          data: (semesters) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+              children: [
+                Text(
+                  DateFormat('MMMM d').format(now),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.inkMuted,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  'Semesters',
+                  style: theme.textTheme.displayLarge?.copyWith(fontSize: 30),
+                ),
+                const SizedBox(height: 20),
+                if (semesters.isEmpty)
+                  _EmptySemesters(
+                    onCreate: () => showSemesterSheet(context),
+                  )
+                else ...[
+                  ...semesters.map((sem) {
+                    final semSubjects =
+                        subjects.where((s) => s.semesterId == sem.id).toList();
+                    final semUnits = semSubjects.fold<double>(
+                        0.0, (acc, s) => acc + s.units);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _SemesterCard(
+                        semester: sem,
+                        subjectCount: semSubjects.length,
+                        totalUnits: semUnits,
+                      ),
+                    );
+                  }),
+                ],
+              ],
             );
-          }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-            children: semesters
-                .map((sem) => _SemesterCard(semester: sem))
-                .toList(),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading semesters: $err')),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showSemesterSheet(context),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_rounded),
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) =>
+              Center(child: Text('Error loading semesters: $err')),
+        ),
       ),
     );
   }
@@ -58,14 +79,19 @@ class SemesterPage extends ConsumerWidget {
 Future<void> showSemesterSheet(
   BuildContext context, {
   SemesterEntity? existing,
-}) {
-  return showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
-    builder: (_) => _SemesterSheet(existing: existing),
-  );
+}) async {
+  fabHiddenNotifier.value = true;
+  try {
+    return await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.28),
+      builder: (_) => _SemesterSheet(existing: existing),
+    );
+  } finally {
+    fabHiddenNotifier.value = false;
+  }
 }
 
 class _SemesterSheet extends ConsumerStatefulWidget {
@@ -111,7 +137,7 @@ class _SemesterSheetState extends ConsumerState<_SemesterSheet> {
   void _save() {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      AppToast.error('Name your semester');
+      AppToast.error('Please enter a semester name');
       return;
     }
     final notifier = ref.read(semesterNotifierProvider.notifier);
@@ -158,7 +184,7 @@ class _SemesterSheetState extends ConsumerState<_SemesterSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.inkFaint.withOpacity(0.5),
+                      color: AppTheme.inkFaint.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -205,7 +231,16 @@ class _SemesterSheetState extends ConsumerState<_SemesterSheet> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _save,
-                    child: Text(_isEditing ? 'Save Changes' : 'Create Semester'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(
+                      _isEditing ? 'Save Changes' : 'Create Semester',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -270,156 +305,202 @@ class _DateField extends StatelessWidget {
 
 class _SemesterCard extends ConsumerWidget {
   final SemesterEntity semester;
+  final int subjectCount;
+  final double totalUnits;
 
-  const _SemesterCard({required this.semester});
+  const _SemesterCard({
+    required this.semester,
+    required this.subjectCount,
+    required this.totalUnits,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final dateRange =
-        '${DateFormat('MMM d, yyyy').format(semester.startDate)} - ${DateFormat('MMM d, yyyy').format(semester.endDate)}';
+        '${DateFormat('MMM d, yyyy').format(semester.startDate)} – ${DateFormat('MMM d, yyyy').format(semester.endDate)}';
+    final unitsStr = totalUnits.toStringAsFixed(
+        totalUnits.truncateToDouble() == totalUnits ? 0 : 1);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: semester.isActive
-            ? Border.all(color: theme.colorScheme.primary, width: 1.5)
-            : Border.all(color: AppTheme.hairline),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    semester.name,
-                    style: theme.textTheme.titleLarge,
-                  ),
+    return SoftCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      semester.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
+                    if (semester.isArchived)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Pill(
+                          text: 'Archived',
+                          bg: isDark ? Colors.white12 : const Color(0xFFEEEEEE),
+                          fg: AppTheme.inkMuted,
+                        ),
+                      ),
+                  ],
                 ),
-                if (semester.isActive)
-                  _Badge(
-                    label: 'ACTIVE',
-                    gradient: const LinearGradient(
-                        colors: AppTheme.primaryGradient),
-                  )
-                else if (semester.isArchived)
-                  _Badge(label: 'ARCHIVED', color: Colors.grey[600]),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.date_range_rounded,
-                    size: 16, color: AppTheme.inkFaint),
-                const SizedBox(width: 8),
-                Text(dateRange, style: theme.textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (!semester.isActive)
-                  TextButton.icon(
-                    onPressed: () {
-                      ref.read(semesterNotifierProvider.notifier).editSemester(
-                            semester.copyWith(isActive: true),
-                          );
-                    },
-                    icon: const Icon(Icons.check_circle_outline_rounded,
-                        size: 16),
-                    label: const Text('Set Active'),
-                  ),
-                IconButton(
-                  tooltip: 'Edit',
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  onPressed: () =>
-                      showSemesterSheet(context, existing: semester),
-                ),
-                IconButton(
-                  tooltip: semester.isArchived ? 'Unarchive' : 'Archive',
-                  icon: Icon(
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: semester.isArchived ? 'Unarchive' : 'Archive',
+                    icon: Icon(
                       semester.isArchived
                           ? Icons.unarchive_outlined
                           : Icons.archive_outlined,
-                      size: 20),
-                  onPressed: () {
-                    ref.read(semesterNotifierProvider.notifier).archiveSemester(
-                          semester,
-                          !semester.isArchived,
-                        );
-                  },
+                      size: 20,
+                      color: semester.isArchived
+                          ? AppTheme.brandDeep
+                          : AppTheme.inkMuted,
+                    ),
+                    onPressed: () {
+                      ref.read(semesterNotifierProvider.notifier).archiveSemester(
+                            semester,
+                            !semester.isArchived,
+                          );
+                      AppToast.success(semester.isArchived
+                          ? '${semester.name} unarchived'
+                          : '${semester.name} archived');
+                    },
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Edit Semester',
+                    icon: const Icon(Icons.edit_outlined,
+                        size: 20, color: AppTheme.inkMuted),
+                    onPressed: () =>
+                        showSemesterSheet(context, existing: semester),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.date_range_rounded,
+                      size: 15, color: AppTheme.inkFaint),
+                  const SizedBox(width: 6),
+                  Text(
+                    dateRange,
+                    style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.inkMuted),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.menu_book_rounded,
+                      size: 15, color: AppTheme.inkFaint),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$subjectCount ${subjectCount == 1 ? 'subject' : 'subjects'} · $unitsStr ${totalUnits == 1 ? 'unit' : 'units'}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.inkMuted),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(
+                semester.isActive ? 'Active' : 'Inactive',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: semester.isActive
+                      ? AppTheme.brandDeep
+                      : AppTheme.inkMuted,
                 ),
-                IconButton(
-                  tooltip: 'Delete',
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: Colors.redAccent, size: 20),
-                  onPressed: () => _confirmDelete(context, ref),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const Spacer(),
+              Switch.adaptive(
+                value: semester.isActive,
+                activeColor: AppTheme.brandDeep,
+                activeTrackColor: AppTheme.soft(AppTheme.brand, 0.4),
+                onChanged: (val) {
+                  ref.read(semesterNotifierProvider.notifier).editSemester(
+                        semester.copyWith(isActive: val),
+                      );
+                  AppToast.success(val
+                      ? '${semester.name} is now the active semester'
+                      : '${semester.name} deactivated');
+                },
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Semester?'),
-          content: Text(
-              'Are you sure you want to delete "${semester.name}"? This action will hide all associated subjects and schedules.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () {
-                ref
-                    .read(semesterNotifierProvider.notifier)
-                    .deleteSemester(semester.id);
-                Navigator.pop(context);
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
     );
   }
 }
 
-class _Badge extends StatelessWidget {
-  final String label;
-  final Gradient? gradient;
-  final Color? color;
-  const _Badge({required this.label, this.gradient, this.color});
+class _EmptySemesters extends StatelessWidget {
+  final VoidCallback onCreate;
+  const _EmptySemesters({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        gradient: gradient,
-        color: gradient == null ? color : null,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      child: Column(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: AppTheme.soft(AppTheme.brand, 0.14),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.calendar_month_rounded,
+                size: 28, color: AppTheme.brandDeep),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Semesters Created',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Create your academic semesters (e.g. Fall 2026, Spring 2027) to organize your courses and schedules.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: onCreate,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Create First Semester'),
+          ),
+        ],
       ),
     );
   }
 }
+

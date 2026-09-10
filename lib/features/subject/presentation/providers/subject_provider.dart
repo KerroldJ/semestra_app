@@ -23,6 +23,7 @@ class SubjectNotifier extends StateNotifier<AsyncValue<List<SubjectEntity>>> {
   }
 
   Future<void> addSubject({
+    String? id,
     required String semesterId,
     required String code,
     required String name,
@@ -32,7 +33,7 @@ class SubjectNotifier extends StateNotifier<AsyncValue<List<SubjectEntity>>> {
     required int colorValue,
   }) async {
     final newSubject = SubjectEntity(
-      id: const Uuid().v4(),
+      id: id ?? const Uuid().v4(),
       semesterId: semesterId,
       code: code,
       name: name,

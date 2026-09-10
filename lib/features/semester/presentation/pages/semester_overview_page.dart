@@ -10,6 +10,7 @@ import '../../../item/presentation/providers/item_provider.dart';
 import '../../../subject/domain/entities/subject_entity.dart';
 import '../../../subject/presentation/providers/subject_provider.dart';
 import '../providers/semester_provider.dart';
+import 'semester_page.dart' show showSemesterSheet;
 
 /// Screen 17 — Semester overview. A week-blocks spine, three headline figures
 /// (subjects / current week / progress) and per-subject completion. The
@@ -255,9 +256,16 @@ class _NoSemester extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => showSemesterSheet(context),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Create Semester'),
+            ),
           ],
         ),
       ),
     );
   }
 }
+

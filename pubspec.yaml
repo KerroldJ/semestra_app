@@ -44,7 +44,7 @@ dependencies:
   intl: ^0.20.3
   path_provider: ^2.1.5
   lottie: ^3.1.2
-  google_sign_in: ^7.1.0
+  sqlite3_flutter_libs: ^0.5.42
 
 dev_dependencies:
   flutter_test:
@@ -77,3 +77,17 @@ flutter:
           weight: 500
         - asset: assets/fonts/InstrumentSans-SemiBold.ttf
           weight: 600
+    # Poppins (OFL) — used for the "Semestra" brand wordmark. Closest free
+    # match to Maya's rounded geometric identity.
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-ExtraBold.ttf
+          weight: 800

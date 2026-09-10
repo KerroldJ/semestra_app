@@ -77,12 +77,6 @@ class _NotesTabPageState extends ConsumerState<NotesTabPage> {
           ],
         ),
       ),
-      floatingActionButton: OutlinedButton.icon(
-        onPressed: () => context.push('/notes/edit'),
-        icon: const Icon(Icons.add_rounded, size: 18),
-        label: const Text('New note'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

@@ -12,24 +12,22 @@ import '../../../item/presentation/providers/item_provider.dart';
 import '../../../item/presentation/item_selectors.dart';
 import '../../../schedule/domain/entities/schedule_entity.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
-import '../../../semester/presentation/providers/semester_provider.dart';
 import '../../../subject/domain/entities/subject_entity.dart';
 import '../../../subject/presentation/providers/subject_provider.dart';
 
-/// Screen 06 — Today. Week banner, Now/Later classes, Due next, semester
-/// progress. Header links to the Semester overview.
+/// Home — the dashboard. A dark hero card (greeting + headline + inline stats
+/// and academic standing), a Today section, a Due-next section (each with a
+/// friendly empty state), and a Recent-updates grid.
 class TodayPage extends ConsumerWidget {
   const TodayPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
-    final theme = Theme.of(context);
     final profile = ref.watch(authNotifierProvider).profile;
     final subjects = ref.watch(subjectNotifierProvider).value ?? [];
     final items = ref.watch(itemNotifierProvider).value ?? [];
     final schedules = ref.watch(scheduleNotifierProvider).value ?? [];
-    final semesters = ref.watch(semesterNotifierProvider).value ?? [];
     final subjectsById = {for (final s in subjects) s.id: s};
 
     // Today's non-study classes, sorted by start.
@@ -57,137 +55,389 @@ class TodayPage extends ConsumerWidget {
 
     final groups = UrgencyGroups.from(items, now);
     final dueNext = [...groups.overdue, ...groups.thisWeek, ...groups.later];
+    final dueSoonCount = groups.overdue.length + groups.thisWeek.length;
+    final notesCount = items.where((i) => i.type == ItemType.note).length;
 
-    // Semester progress (week x of n).
-    final active = semesters.isEmpty
-        ? null
-        : semesters.firstWhere((s) => s.isActive, orElse: () => semesters.first);
+    // Academic standing — derived from work-item completion, penalised by any
+    // overdue items. A friendly proxy since the app tracks no formal grades.
+    final work = items.where((i) => i.type != ItemType.note).toList();
+    final done = work.where((i) => i.isCompleted).length;
+    var standingScore = work.isEmpty ? 0.85 : done / work.length;
+    if (groups.overdue.isNotEmpty) {
+      standingScore =
+          (standingScore - 0.15 * groups.overdue.length).clamp(0.1, 1.0);
+    }
+    final standingLabel = standingScore >= 0.8
+        ? 'Good'
+        : standingScore >= 0.55
+            ? 'Fair'
+            : 'Needs work';
+
+    // Recent activity, newest first.
+    final recent = [...items]
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final recentTop = recent.take(4).toList();
+
+    final handle = profile?.username.isNotEmpty == true
+        ? '@${profile!.username}'
+        : 'there';
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
           children: [
-            // Header: week-of banner + Semester link.
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Eyebrow('Week of ${DateFormat('MMM d').format(_weekStart(now))}'),
-                      const SizedBox(height: 4),
-                      Text(
-                        _greeting(now, profile?.username ?? profile?.displayName),
-                        style: theme.textTheme.displayLarge?.copyWith(fontSize: 28),
-                      ),
-                    ],
-                  ),
-                ),
-                _CircleAction(
-                  icon: Icons.calendar_month_rounded,
-                  onTap: () => context.push('/semester'),
-                ),
+            HeroCard(
+              greeting: handle,
+              subtitle: DateFormat('EEEE, MMM d').format(now),
+              headline: dueSoonCount == 0
+                  ? 'You\'re all caught up'
+                  : '$dueSoonCount ${dueSoonCount == 1 ? 'task' : 'tasks'} due this week',
+              onGreetingTap: () => context.push('/settings'),
+              stats: [
+                HeroStat('$dueSoonCount', 'Due this week'),
+                HeroStat('${todays.length}', 'Classes today'),
+                HeroStat('$notesCount', 'Notes'),
               ],
-            ),
-            const SizedBox(height: 22),
-
-            // Now.
-            Eyebrow('Now'),
-            const SizedBox(height: 10),
-            if (live != null)
-              _ClassCard(
-                schedule: live,
-                subject: subjectsById[live.subjectId],
-                highlighted: true,
-              )
-            else
-              _QuietCard(
-                icon: Icons.free_breakfast_outlined,
-                text: todays.isEmpty
-                    ? 'No classes today. A good day to get ahead.'
-                    : 'No class right now.',
+              standing: HeroStanding(
+                value: standingLabel,
+                progress: standingScore.toDouble(),
               ),
-            const SizedBox(height: 22),
+            ),
+            const SizedBox(height: 30),
 
-            // Later today.
-            Eyebrow('Later today'),
-            const SizedBox(height: 10),
-            if (later.isEmpty)
-              _QuietCard(
-                  icon: Icons.check_circle_outline_rounded,
-                  text: 'Nothing else scheduled today.')
-            else
+            // ---- Today ----
+            const _SectionTitle(
+                icon: Icons.wb_sunny_outlined, title: 'Today'),
+            const SizedBox(height: 14),
+            if (todays.isEmpty)
+              _EmptyStateCard(
+                icon: Icons.free_breakfast_outlined,
+                title: 'No classes scheduled for today.',
+                subtitle:
+                    'Explore course materials or schedule a study session.',
+                actions: [
+                  _CardAction('View Syllabus', null, () => context.go('/subjects')),
+                  _CardAction('Book Room', null, () => context.go('/planner')),
+                ],
+              )
+            else ...[
+              if (live != null)
+                _ClassCard(
+                  schedule: live,
+                  subject: subjectsById[live.subjectId],
+                  highlighted: true,
+                )
+              else
+                _QuietCard(
+                    icon: Icons.free_breakfast_outlined,
+                    text: 'No class right now.'),
               ...later.map((s) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.only(top: 10),
                     child: _ClassCard(
                         schedule: s, subject: subjectsById[s.subjectId]),
                   )),
-            const SizedBox(height: 22),
+            ],
+            const SizedBox(height: 30),
 
-            // Due next.
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Eyebrow('Due next'),
-                if (dueNext.isNotEmpty)
-                  GestureDetector(
-                    onTap: () => context.push('/assignments'),
-                    child: Text('All assignments',
-                        style: TextStyle(
-                          fontFamily: AppTheme.fontFamily,
-                          color: AppTheme.goldDeep,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.5,
-                        )),
-                  ),
-              ],
+            // ---- Due next ----
+            _SectionTitle(
+              icon: Icons.event_note_outlined,
+              title: 'Due next',
+              actionLabel: dueNext.isNotEmpty ? 'View all' : null,
+              onAction:
+                  dueNext.isNotEmpty ? () => context.push('/assignments') : null,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             if (dueNext.isEmpty)
-              _QuietCard(
-                  icon: Icons.done_all_rounded,
-                  text: 'You’re all caught up. Nothing due.')
+              _EmptyStateCard(
+                icon: Icons.check_rounded,
+                title: 'You\'re all caught up. No pending deliverables.',
+                subtitle: 'Get a head start on next term\'s tasks.',
+                actions: [
+                  _CardAction('Create Task', null,
+                      () => context.push('/assignments/edit')),
+                  _CardAction('Resource Library', Icons.folder_open_rounded,
+                      () => context.go('/notes')),
+                ],
+              )
             else
               ...dueNext.take(3).map((i) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _DueCard(
                         item: i, subject: subjectsById[i.subjectId], now: now),
                   )),
-            const SizedBox(height: 22),
 
-            // Semester progress.
-            if (active != null) ...[
-              Eyebrow('Semester'),
-              const SizedBox(height: 10),
-              _SemesterProgressCard(
-                name: active.name,
-                start: active.startDate,
-                end: active.endDate,
-                now: now,
-                onTap: () => context.push('/semester'),
+            // ---- Recent updates ----
+            if (recentTop.isNotEmpty) ...[
+              const SizedBox(height: 30),
+              Text(
+                'RECENT UPDATES',
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: AppTheme.inkMuted,
+                ),
               ),
+              const SizedBox(height: 14),
+              _RecentGrid(items: recentTop, subjectsById: subjectsById),
             ],
           ],
         ),
       ),
     );
   }
+}
 
-  static DateTime _weekStart(DateTime now) {
-    final delta = now.weekday - 1; // Monday-based
-    return DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: delta));
+/// Section header with a leading icon and an optional trailing text action.
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  const _SectionTitle({
+    required this.icon,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 19, color: AppTheme.ink),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(title,
+              style:
+                  Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17)),
+        ),
+        if (actionLabel != null)
+          GestureDetector(
+            onTap: onAction,
+            child: Text(actionLabel!,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  color: AppTheme.brandDeep,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13.5,
+                )),
+          ),
+      ],
+    );
+  }
+}
+
+class _CardAction {
+  final String label;
+  final IconData? icon;
+  final VoidCallback onTap;
+  const _CardAction(this.label, this.icon, this.onTap);
+}
+
+/// A centered empty-state card: icon, title, subtitle and two ghost buttons.
+class _EmptyStateCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<_CardAction> actions;
+  const _EmptyStateCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.hairline),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 26, color: AppTheme.inkFaint),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                Flexible(child: _GhostButton(action: actions[i])),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A neutral, hairline-outlined button used inside empty states.
+class _GhostButton extends StatelessWidget {
+  final _CardAction action;
+  const _GhostButton({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: action.onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.hairline),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (action.icon != null) ...[
+                Icon(action.icon, size: 16, color: AppTheme.ink),
+                const SizedBox(width: 7),
+              ],
+              Flexible(
+                child: Text(
+                  action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A responsive 2-column grid of recent-activity cards.
+class _RecentGrid extends StatelessWidget {
+  final List<ItemEntity> items;
+  final Map<String, SubjectEntity> subjectsById;
+  const _RecentGrid({required this.items, required this.subjectsById});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < items.length; i += 2) {
+      final left = items[i];
+      final right = i + 1 < items.length ? items[i + 1] : null;
+      rows.add(Padding(
+        padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                  child: _UpdateCard(
+                      item: left, subject: subjectsById[left.subjectId])),
+              const SizedBox(width: 12),
+              Expanded(
+                child: right == null
+                    ? const SizedBox.shrink()
+                    : _UpdateCard(
+                        item: right, subject: subjectsById[right.subjectId]),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+    return Column(children: rows);
+  }
+}
+
+class _UpdateCard extends StatelessWidget {
+  final ItemEntity item;
+  final SubjectEntity? subject;
+  const _UpdateCard({required this.item, required this.subject});
+
+  IconData get _icon {
+    switch (item.type) {
+      case ItemType.note:
+        return Icons.sticky_note_2_outlined;
+      case ItemType.task:
+        return Icons.check_circle_outline_rounded;
+      case ItemType.assignment:
+        return Icons.assignment_outlined;
+    }
   }
 
-  static String _greeting(DateTime now, String? name) {
-    final n = (name == null || name.isEmpty) ? '' : ', $name';
-    final h = now.hour;
-    if (h < 12) return 'Good morning$n';
-    if (h < 18) return 'Good afternoon$n';
-    return 'Good evening$n';
+  String get _subline {
+    if (item.dueDate != null) {
+      return 'Due ${DateFormat('MMM d, yyyy').format(item.dueDate!)}';
+    }
+    return DateFormat('MMM d · h:mm a').format(item.updatedAt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppTheme.soft(AppTheme.brand, 0.14),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(_icon, size: 18, color: AppTheme.brandDeep),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            item.title.isEmpty ? 'Untitled' : item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontSize: 13.5),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            _subline,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -239,7 +489,7 @@ class _ClassCard extends StatelessWidget {
               ],
             ),
           ),
-          if (highlighted) const StrokeLabel(text: 'Now', color: AppTheme.gold),
+          if (highlighted) const StrokeLabel(text: 'Now', color: AppTheme.brand),
         ],
       ),
     );
@@ -284,66 +534,15 @@ class _DueCard extends StatelessWidget {
           ),
           Text(
             Fmt.dueLabel(item.dueDate!),
-            style: Theme.of(context).textTheme.bodyMedium?.merge(AppTheme.tnum).copyWith(
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.merge(AppTheme.tnum)
+                .copyWith(
                   color: overdue ? AppTheme.danger : AppTheme.inkMuted,
                   fontWeight: FontWeight.w600,
                 ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SemesterProgressCard extends StatelessWidget {
-  final String name;
-  final DateTime start;
-  final DateTime end;
-  final DateTime now;
-  final VoidCallback onTap;
-  const _SemesterProgressCard({
-    required this.name,
-    required this.start,
-    required this.end,
-    required this.now,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final total = end.difference(start).inDays;
-    final elapsed = now.difference(start).inDays.clamp(0, total <= 0 ? 0 : total);
-    final frac = total <= 0 ? 0.0 : elapsed / total;
-    final totalWeeks = (total / 7).ceil().clamp(1, 30);
-    final currentWeek = (elapsed / 7).floor().clamp(0, totalWeeks) + 1;
-
-    return SpineCard(
-      spine: AppTheme.gold,
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(name,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-              Text('Week $currentWeek of $totalWeeks',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.merge(AppTheme.tnum)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ProgressBar(value: frac.toDouble(), color: AppTheme.gold),
-          const SizedBox(height: 8),
-          Text('${(frac * 100).round()}% through the term',
-              style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
@@ -360,7 +559,8 @@ class _QuietCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppTheme.hairline),
       ),
       child: Row(
@@ -371,30 +571,6 @@ class _QuietCard extends StatelessWidget {
             child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CircleAction extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _CircleAction({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkResponse(
-      onTap: onTap,
-      radius: 26,
-      child: Container(
-        width: 44,
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppTheme.hairline),
-        ),
-        child: Icon(icon, size: 21, color: AppTheme.ink),
       ),
     );
   }

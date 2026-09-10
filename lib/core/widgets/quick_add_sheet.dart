@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../theme/app_theme.dart';
 import '../utils/app_toast.dart';
@@ -8,36 +9,51 @@ import '../../features/item/domain/entities/item_entity.dart';
 import '../../features/item/presentation/providers/item_provider.dart';
 import '../../features/subject/domain/entities/subject_entity.dart';
 import '../../features/subject/presentation/providers/subject_provider.dart';
+import '../../features/schedule/domain/entities/schedule_entity.dart';
 import '../../features/schedule/presentation/providers/schedule_provider.dart';
+
+import '../../features/semester/presentation/providers/semester_provider.dart';
+import '../../features/semester/presentation/pages/semester_page.dart' show showSemesterSheet;
+import '../../app/navigation/navigation_shell.dart' show fabHiddenNotifier;
 
 // ---------------------------------------------------------------------------
 // Public entry points
 // ---------------------------------------------------------------------------
 
 /// The quick-add menu is a floating popup anchored above the FAB.
-Future<void> showQuickAddSheet(BuildContext context) {
-  return showGeneralDialog(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'Quick add',
-    barrierColor: Colors.black.withOpacity(0.25),
-    transitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-    transitionBuilder: (ctx, anim, _, __) {
-      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
-      return _QuickAddFloating(animation: curved);
-    },
-  );
+Future<void> showQuickAddSheet(BuildContext context) async {
+  fabHiddenNotifier.value = true;
+  try {
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Quick add',
+      barrierColor: Colors.black.withOpacity(0.25),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim, _, __) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return _QuickAddFloating(animation: curved);
+      },
+    );
+  } finally {
+    fabHiddenNotifier.value = false;
+  }
 }
 
-Future<T?> _showSheet<T>(BuildContext context, Widget child) {
-  return showModalBottomSheet<T>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
-    builder: (_) => child,
-  );
+Future<T?> _showSheet<T>(BuildContext context, Widget child) async {
+  fabHiddenNotifier.value = true;
+  try {
+    return await showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.25),
+      builder: (_) => child,
+    );
+  } finally {
+    fabHiddenNotifier.value = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +150,19 @@ class _PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(onPressed: onTap, child: Text(label)),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+        ),
+        onPressed: onTap,
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -217,14 +245,6 @@ class _QuickAddFloating extends StatelessWidget {
                       subtitle: 'Graded work with a due date',
                       onTap: () => openThen(
                           () => showNewWorkItemSheet(context, ItemType.assignment)),
-                    ),
-                    _QuickAddOption(
-                      icon: Icons.schedule_rounded,
-                      color: AppTheme.statOrange,
-                      title: 'Study session',
-                      subtitle: 'Block time on your planner',
-                      onTap: () =>
-                          openThen(() => showNewStudySessionSheet(context)),
                     ),
                   ],
                 ),
@@ -786,3 +806,489 @@ class _NewStudySessionSheetState extends ConsumerState<_NewStudySessionSheet> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// New Subject
+// ---------------------------------------------------------------------------
+
+Future<void> showNewSubjectSheet(BuildContext context, {String? defaultSemesterId}) =>
+    _showSheet(context, _NewSubjectSheet(defaultSemesterId: defaultSemesterId));
+
+Future<void> showEditSubjectSheet(
+  BuildContext context, {
+  required SubjectEntity subject,
+  List<ScheduleEntity>? schedules,
+}) =>
+    _showSheet(
+      context,
+      _NewSubjectSheet(
+        subjectToEdit: subject,
+        existingSchedules: schedules,
+      ),
+    );
+
+class _NewSubjectSheet extends ConsumerStatefulWidget {
+  final String? defaultSemesterId;
+  final SubjectEntity? subjectToEdit;
+  final List<ScheduleEntity>? existingSchedules;
+
+  const _NewSubjectSheet({
+    this.defaultSemesterId,
+    this.subjectToEdit,
+    this.existingSchedules,
+  });
+
+  @override
+  ConsumerState<_NewSubjectSheet> createState() => _NewSubjectSheetState();
+}
+
+class _NewSubjectSheetState extends ConsumerState<_NewSubjectSheet> {
+  final _code = TextEditingController();
+  final _name = TextEditingController();
+  final _instructor = TextEditingController();
+  final _classroom = TextEditingController();
+  String? _semesterId;
+  double _units = 3.0;
+  Color _color = AppTheme.subjectColors.first;
+  final Set<int> _selectedDays = {1};
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 10, minute: 0);
+
+  bool get _isEditing => widget.subjectToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final sub = widget.subjectToEdit!;
+      _code.text = sub.code;
+      _name.text = sub.name;
+      _instructor.text = sub.instructor;
+      _classroom.text = sub.classroom;
+      _semesterId = sub.semesterId;
+      _units = sub.units;
+      _color = Color(sub.colorValue);
+
+      if (widget.existingSchedules != null &&
+          widget.existingSchedules!.isNotEmpty) {
+        _selectedDays.clear();
+        for (final s in widget.existingSchedules!) {
+          _selectedDays.add(s.dayOfWeek);
+        }
+        final first = widget.existingSchedules!.first;
+        final st = Fmt.parseHHmm(first.startTime);
+        if (st != null) _startTime = st;
+        final et = Fmt.parseHHmm(first.endTime);
+        if (et != null) _endTime = et;
+      }
+    } else {
+      _semesterId = widget.defaultSemesterId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _code.dispose();
+    _name.dispose();
+    _instructor.dispose();
+    _classroom.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickTime(bool isStart) async {
+    final initial = isStart ? _startTime : _endTime;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startTime = picked;
+          final startMins = _startTime.hour * 60 + _startTime.minute;
+          final endMins = _endTime.hour * 60 + _endTime.minute;
+          if (endMins <= startMins) {
+            _endTime = TimeOfDay(
+              hour: (_startTime.hour + 1) % 24,
+              minute: _startTime.minute,
+            );
+          }
+        } else {
+          _endTime = picked;
+        }
+      });
+    }
+  }
+
+  void _save() {
+    final code = _code.text.trim().toUpperCase();
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      AppToast.error('Please enter a subject name');
+      return;
+    }
+    if (_semesterId == null) {
+      AppToast.error('Please select a semester');
+      return;
+    }
+
+    if (_isEditing) {
+      final updated = widget.subjectToEdit!.copyWith(
+        semesterId: _semesterId!,
+        code: code,
+        name: name,
+        instructor: _instructor.text.trim(),
+        classroom: _classroom.text.trim(),
+        units: _units,
+        colorValue: _color.toARGB32(),
+      );
+      ref.read(subjectNotifierProvider.notifier).editSubject(updated);
+
+      if (widget.existingSchedules != null) {
+        for (final sch in widget.existingSchedules!) {
+          ref.read(scheduleNotifierProvider.notifier).deleteSchedule(sch.id);
+        }
+      }
+
+      for (final day in _selectedDays) {
+        ref.read(scheduleNotifierProvider.notifier).addSchedule(
+              subjectId: updated.id,
+              dayOfWeek: day,
+              startTime: Fmt.hhmmFromTod(_startTime),
+              endTime: Fmt.hhmmFromTod(_endTime),
+              classroom: _classroom.text.trim(),
+              instructor: _instructor.text.trim(),
+              type: 0,
+            );
+      }
+
+      AppToast.success('Subject updated');
+    } else {
+      final subjectId = const Uuid().v4();
+      ref.read(subjectNotifierProvider.notifier).addSubject(
+            id: subjectId,
+            semesterId: _semesterId!,
+            code: code,
+            name: name,
+            instructor: _instructor.text.trim(),
+            classroom: _classroom.text.trim(),
+            units: _units,
+            colorValue: _color.toARGB32(),
+          );
+
+      for (final day in _selectedDays) {
+        ref.read(scheduleNotifierProvider.notifier).addSchedule(
+              subjectId: subjectId,
+              dayOfWeek: day,
+              startTime: Fmt.hhmmFromTod(_startTime),
+              endTime: Fmt.hhmmFromTod(_endTime),
+              classroom: _classroom.text.trim(),
+              instructor: _instructor.text.trim(),
+              type: 0,
+            );
+      }
+
+      AppToast.success('Subject added');
+    }
+
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final semesters = ref.watch(semesterNotifierProvider).value ?? [];
+    if (_semesterId == null && semesters.isNotEmpty) {
+      final active = semesters.firstWhere((s) => s.isActive, orElse: () => semesters.first);
+      _semesterId = active.id;
+    }
+
+    return _SheetShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SheetTitle(_isEditing ? 'Edit Subject' : 'New Subject'),
+          const SizedBox(height: 20),
+          if (semesters.isEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.soft(AppTheme.statOrange, 0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'No semesters found',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'You need to create a semester before adding subjects to it.',
+                    style: TextStyle(color: AppTheme.inkMuted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        showSemesterSheet(context);
+                      },
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Create a Semester'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const _FieldLabel('SEMESTER'),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.darkCard
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.hairline),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _semesterId,
+                  isExpanded: true,
+                  items: semesters.map((s) {
+                    return DropdownMenuItem<String>(
+                      value: s.id,
+                      child: Text(
+                        '${s.name}${s.isActive ? ' (Active)' : ''}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _semesterId = val);
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _FieldLabel('CODE'),
+                      TextField(
+                        controller: _code,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(hintText: 'CS101'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _FieldLabel('SUBJECT NAME'),
+                      TextField(
+                        controller: _name,
+                        decoration: const InputDecoration(hintText: 'e.g. Data Structures'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _FieldLabel('INSTRUCTOR'),
+                      TextField(
+                        controller: _instructor,
+                        decoration: const InputDecoration(hintText: 'Optional'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _FieldLabel('CLASSROOM'),
+                      TextField(
+                        controller: _classroom,
+                        decoration: const InputDecoration(hintText: 'Optional'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const _FieldLabel('DAY (MON - SUN)'),
+            Row(
+              children: List.generate(7, (i) {
+                final dayNum = i + 1;
+                final isSelected = _selectedDays.contains(dayNum);
+                const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          if (_selectedDays.length > 1) {
+                            _selectedDays.remove(dayNum);
+                          }
+                        } else {
+                          _selectedDays.add(dayNum);
+                        }
+                      });
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(right: i < 6 ? 5 : 0),
+                      height: 42,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.brand
+                            : (Theme.of(context).brightness == Brightness.dark
+                                ? AppTheme.darkCard
+                                : Colors.white),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? AppTheme.brand : AppTheme.hairline,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Text(
+                        dayLabels[i],
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : AppTheme.inkMuted,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _FieldLabel('START TIME'),
+                      _PickerField(
+                        label: Fmt.time12(Fmt.hhmmFromTod(_startTime)),
+                        muted: false,
+                        icon: Icons.access_time_rounded,
+                        onTap: () => _pickTime(true),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _FieldLabel('END TIME'),
+                      _PickerField(
+                        label: Fmt.time12(Fmt.hhmmFromTod(_endTime)),
+                        muted: false,
+                        icon: Icons.access_time_rounded,
+                        onTap: () => _pickTime(false),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const _FieldLabel('CREDITS / UNITS'),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline_rounded),
+                      onPressed: () {
+                        if (_units > 0.5) setState(() => _units -= 0.5);
+                      },
+                    ),
+                    Text(
+                      '$_units',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      onPressed: () => setState(() => _units += 0.5),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const _FieldLabel('COLOR THEME'),
+            Wrap(
+              spacing: 8,
+              children: AppTheme.subjectColors.map((color) {
+                final isSelected = _color == color;
+                return GestureDetector(
+                  onTap: () => setState(() => _color = color),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: Colors.white, width: 2.5)
+                          : null,
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.5),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            _PrimaryButton(
+              label: _isEditing ? 'Save Changes' : 'Save Subject',
+              onTap: _save,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+

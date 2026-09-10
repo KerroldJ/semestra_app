@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../../../core/database/database_backup_service.dart';
+import '../../../auth/domain/username_validator.dart';
 import '../../../auth/presentation/auth_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -38,45 +39,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
           children: [
-            // ---- Account ----
+            // ---- Profile ----
             _Section(
-              label: 'Account',
+              label: 'Profile',
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      _Avatar(profile?.photoUrl, profile?.displayName ?? '?'),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              profile?.username?.isNotEmpty == true
-                                  ? '@${profile!.username}'
-                                  : (profile?.displayName ?? 'Signed in'),
-                              style: Theme.of(context).textTheme.titleMedium,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (profile?.email.isNotEmpty == true)
-                              Text(profile!.email,
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                          ],
+                  Text(
+                    profile?.username.isNotEmpty == true
+                        ? '@${profile!.username}'
+                        : 'No username yet',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                         ),
-                      ),
-                    ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 2),
+                  Text('Stored on this device',
+                      style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _confirmSignOut,
-                      icon: const Icon(Icons.logout_rounded, size: 18),
-                      label: const Text('Sign out'),
+                      onPressed: _editUsername,
+                      icon: const Icon(Icons.edit_rounded, size: 18),
+                      label: const Text('Edit username'),
                     ),
                   ),
                 ],
@@ -194,26 +183,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // ---- Actions ----
 
-  Future<void> _confirmSignOut() async {
-    final ok = await showDialog<bool>(
+  Future<void> _editUsername() async {
+    final current = ref.read(authNotifierProvider).profile?.username ?? '';
+    final newName = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text(
-            'Your data stays on this device. You can sign back in anytime.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Sign out')),
-        ],
-      ),
+      builder: (_) => _EditUsernameDialog(initial: current),
     );
-    if (ok == true) {
-      await ref.read(authNotifierProvider.notifier).signOut();
-      // The router's auth gate redirects to /welcome once signed out.
+    if (!mounted) return;
+    if (newName != null && newName.isNotEmpty && newName != current) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      if (!mounted) return;
+      await ref.read(authNotifierProvider.notifier).updateUsername(newName);
+      if (!mounted) return;
+      AppToast.success('Username updated');
     }
   }
 
@@ -447,33 +429,70 @@ class _HairlineDivider extends StatelessWidget {
       const Divider(height: 24, color: AppTheme.hairline, thickness: 1);
 }
 
-class _Avatar extends StatelessWidget {
-  final String? url;
-  final String name;
-  const _Avatar(this.url, this.name);
+class _EditUsernameDialog extends StatefulWidget {
+  final String initial;
+  const _EditUsernameDialog({required this.initial});
+
+  @override
+  State<_EditUsernameDialog> createState() => _EditUsernameDialogState();
+}
+
+class _EditUsernameDialogState extends State<_EditUsernameDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initial);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final v = _controller.text.trim();
+    final err = UsernameValidator.validate(v);
+    if (err != null) {
+      setState(() => _error = err);
+      return;
+    }
+    Navigator.of(context).pop(v);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (url != null && url!.isNotEmpty) {
-      return CircleAvatar(radius: 26, backgroundImage: NetworkImage(url!));
-    }
-    return Container(
-      width: 52,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: AppTheme.gold, width: 1.4),
-      ),
-      child: Text(
-        AppTheme.initials(name),
-        style: const TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.goldDeep,
-          fontSize: 18,
+    return AlertDialog(
+      title: const Text('Edit username'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        autocorrect: false,
+        enableSuggestions: false,
+        decoration: InputDecoration(
+          prefixText: '@ ',
+          hintText: 'username',
+          errorText: _error,
         ),
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        onSubmitted: (_) => _submit(),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }
+

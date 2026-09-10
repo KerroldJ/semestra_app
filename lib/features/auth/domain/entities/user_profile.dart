@@ -1,72 +1,59 @@
-/// The local identity created after Google sign-in.
+/// The local, offline-first identity.
 ///
-/// Semestra is offline-first: the Google account only supplies identity
-/// (email, name, photo). Everything else — including the chosen [username] —
-/// lives on-device in the single-row `user_profile` table.
+/// Semestra has no accounts and no network sign-in — the user simply picks a
+/// [username] on first launch. Everything lives on-device in the single-row
+/// `user_profile` table. [id] is a locally generated identifier (it maps to the
+/// legacy `google_id` primary-key column so no schema migration is needed).
 class UserProfile {
-  final String googleId;
-  final String email;
+  final String id;
+
+  /// Locally-chosen handle. Empty until the username step completes.
+  final String username;
+
+  /// Optional friendly display name. Defaults to the username when unset.
   final String displayName;
-  final String? photoUrl;
-
-  /// Locally-chosen handle. Null until the username onboarding step completes.
-  final String? username;
-
-  /// Set once the user has finished onboarding (username + at least one
-  /// subject). Null means onboarding is still in progress.
-  final DateTime? onboardedAt;
 
   const UserProfile({
-    required this.googleId,
-    required this.email,
-    required this.displayName,
-    this.photoUrl,
-    this.username,
-    this.onboardedAt,
+    required this.id,
+    required this.username,
+    this.displayName = '',
   });
 
-  bool get hasUsername => username != null && username!.trim().isNotEmpty;
-  bool get isOnboarded => onboardedAt != null;
+  bool get hasUsername => username.trim().isNotEmpty;
+
+  /// A name suitable for greetings — the display name if set, else the handle.
+  String get greetingName =>
+      displayName.trim().isNotEmpty ? displayName.trim() : username;
 
   UserProfile copyWith({
-    String? email,
-    String? displayName,
-    String? photoUrl,
     String? username,
-    DateTime? onboardedAt,
+    String? displayName,
   }) {
     return UserProfile(
-      googleId: googleId,
-      email: email ?? this.email,
-      displayName: displayName ?? this.displayName,
-      photoUrl: photoUrl ?? this.photoUrl,
+      id: id,
       username: username ?? this.username,
-      onboardedAt: onboardedAt ?? this.onboardedAt,
+      displayName: displayName ?? this.displayName,
     );
   }
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
-    final onboarded = map['onboarded_at'] as String?;
     return UserProfile(
-      googleId: map['google_id'] as String,
-      email: map['email'] as String,
-      displayName: map['display_name'] as String,
-      photoUrl: map['photo_url'] as String?,
-      username: map['username'] as String?,
-      onboardedAt: (onboarded != null && onboarded.isNotEmpty)
-          ? DateTime.parse(onboarded)
-          : null,
+      id: map['google_id'] as String,
+      username: (map['username'] as String?) ?? '',
+      displayName: (map['display_name'] as String?) ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'google_id': googleId,
-      'email': email,
+      'google_id': id,
+      // `email` / `display_name` are NOT NULL legacy columns — keep them
+      // satisfied with local values. Email is unused offline.
+      'email': '',
       'display_name': displayName,
-      'photo_url': photoUrl,
+      'photo_url': null,
       'username': username,
-      'onboarded_at': onboardedAt?.toIso8601String(),
+      'onboarded_at': null,
     };
   }
 }

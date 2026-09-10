@@ -18,6 +18,8 @@ class NoteEditorPage extends ConsumerStatefulWidget {
 class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final _titleUndoController = UndoHistoryController();
+  final _contentUndoController = UndoHistoryController();
   String? _selectedSubjectId;
   bool _isSaved = false;
 
@@ -38,6 +40,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _titleUndoController.dispose();
+    _contentUndoController.dispose();
     super.dispose();
   }
 
@@ -78,6 +82,22 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     }
   }
 
+  void _undo() {
+    if (_contentUndoController.value.canUndo) {
+      _contentUndoController.undo();
+    } else if (_titleUndoController.value.canUndo) {
+      _titleUndoController.undo();
+    }
+  }
+
+  void _redo() {
+    if (_contentUndoController.value.canRedo) {
+      _contentUndoController.redo();
+    } else if (_titleUndoController.value.canRedo) {
+      _titleUndoController.redo();
+    }
+  }
+
   void _saveAndPop() {
     _saveNote();
     context.pop();
@@ -108,19 +128,20 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           title: Text(_isEditing ? 'Edit Note' : 'New Note',
               style: const TextStyle(fontWeight: FontWeight.normal)),
           actions: [
-            PopupMenuButton<String>(
-              onSelected: (val) {
-                if (val == 'save') {
-                  _saveAndPop();
-                } else if (val == 'discard') {
-                  _isSaved = true;
-                  context.pop();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'save', child: Text('Save Note')),
-                PopupMenuItem(value: 'discard', child: Text('Discard Changes')),
-              ],
+            IconButton(
+              icon: const Icon(Icons.undo_rounded),
+              tooltip: 'Undo',
+              onPressed: _undo,
+            ),
+            IconButton(
+              icon: const Icon(Icons.redo_rounded),
+              tooltip: 'Redo',
+              onPressed: _redo,
+            ),
+            IconButton(
+              icon: const Icon(Icons.check_rounded),
+              tooltip: 'Save Note',
+              onPressed: _saveAndPop,
             ),
           ],
         ),
@@ -165,6 +186,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _titleController,
+                      undoController: _titleUndoController,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.normal,
                         color: theme.textTheme.headlineMedium?.color?.withOpacity(0.9),
@@ -182,6 +204,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                     Expanded(
                       child: TextField(
                         controller: _contentController,
+                        undoController: _contentUndoController,
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
                         style: theme.textTheme.bodyLarge?.copyWith(

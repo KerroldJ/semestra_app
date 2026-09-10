@@ -1,39 +1,45 @@
 import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 
-/// Semestra's warm / gold design system.
+/// Semestra's Maya-inspired design system.
 ///
 /// Rules that keep the aesthetic coherent:
-/// - Backgrounds are warm greys (`bg` / `elevated`), text is near-black `ink`.
-/// - Gold (`gold`) is **stroke-only** — borders, the active tab, priority
-///   labels, the compose ring, focus states. It is never a large fill.
-///   `goldDeep` is used for gold *text*.
-/// - Subjects are differentiated by a 2px tonal **spine** (see [spineFor]),
-///   not by competing hues.
+/// - The body is bright and airy: a near-white `bg` with pure white `elevated`
+///   cards. Text is near-black `ink`.
+/// - `brand` (Maya green) is a **fill** color — primary buttons, the active
+///   tab, the compose button, progress fills, toggles. `brandDeep` is the
+///   readable green used for green *text* and outlines on white.
+/// - "Spotlight" surfaces (the home hero card) use the dark green→black
+///   [heroGradient] with white text — the "balance card" analog.
+/// - Subjects are differentiated by a tonal **spine** (see [spineFor]), retoned
+///   to the green family so they never fight the brand.
 /// - Type is Instrument Sans; [tnum] enables tabular figures so times, dates
 ///   and counts stay aligned.
 class AppTheme {
-  // ---- Warm neutrals (light) ----
-  static const Color bg = Color(0xFFF3F2F2); // app background
-  static const Color elevated = Color(0xFFEAE9E9); // cards / raised surfaces
-  static const Color ink = Color(0xFF201F1D); // primary text
+  // ---- Neutrals (light) ----
+  static const Color bg = Color(0xFFFFFFFF); // app background (pure white)
+  static const Color elevated = Color(0xFFFFFFFF); // cards / raised surfaces
+  static const Color ink = Color(0xFF0B0F0D); // primary text
   // Alpha-encoded tints of `ink`. Kept `const` (not withOpacity) so the many
   // existing `const TextStyle(color: AppTheme.inkMuted)` call sites still work.
-  static const Color inkMuted = Color(0x9E201F1D); // ~0.62 — secondary text
-  static const Color inkFaint = Color(0x66201F1D); // ~0.40 — tertiary / hints
-  static const Color hairline = Color(0x1A201F1D); // ~0.10 — subtle borders
+  static const Color inkMuted = Color(0x8C0B0F0D); // ~0.55 — secondary text
+  static const Color inkFaint = Color(0x5C0B0F0D); // ~0.36 — tertiary / hints
+  static const Color hairline = Color(0x140B0F0D); // ~0.08 — subtle borders
 
-  // ---- Gold (stroke-only) ----
-  static const Color gold = Color(0xFFB68235); // strokes, active states
-  static const Color goldDeep = Color(0xFF7D5411); // gold *text*
+  // ---- Brand green (Maya) ----
+  static const Color brand = Color(0xFF00C566); // primary fill / active states
+  static const Color brandDeep = Color(0xFF0A7D43); // green *text* / outlines
 
-  // ---- Subject spine palette (tonal, not competing hues) ----
+  // ---- Hero (dark spotlight surface) ----
+  static const List<Color> heroGradient = [Color(0xFF0C271C), Color(0xFF05100B)];
+
+  // ---- Subject spine palette (tonal, green family) ----
   static const List<Color> spinePalette = [
-    Color(0xFF7D5411),
-    Color(0xFFC28D41),
-    Color(0xFF605D5D),
-    Color(0xFF9B9797),
-    Color(0xFFBAB6B6),
+    Color(0xFF0A7D43),
+    Color(0xFF12A45B),
+    Color(0xFF4E6B3F),
+    Color(0xFF5E6B64),
+    Color(0xFF93A099),
   ];
 
   /// Maps a subject to a spine tone. Accepts either a stored ARGB color value
@@ -47,29 +53,32 @@ class AppTheme {
     return spinePalette[indexOrColor.abs() % spinePalette.length];
   }
 
-  // ---- Semantic accents (used sparingly, mostly as stroke / text) ----
-  static const Color danger = Color(0xFFB4432E); // overdue / destructive
-  static const Color success = Color(0xFF4E6B3F); // done / positive
+  // ---- Semantic accents ----
+  static const Color danger = Color(0xFFE5484D); // overdue / destructive
+  static const Color warning = Color(0xFFF5A524); // due soon
+  static const Color success = Color(0xFF0A7D43); // done / positive
 
-  // ---- Dark palette (retuned to warm neutrals) ----
-  static const Color darkBg = Color(0xFF1A1917);
-  static const Color darkElevated = Color(0xFF242220);
-  static const Color darkInk = Color(0xFFF1EFEC);
+  // ---- Dark palette ----
+  static const Color darkBg = Color(0xFF0A0D0B);
+  static const Color darkElevated = Color(0xFF151916);
+  static const Color darkInk = Color(0xFFECF1ED);
 
   // ---- Back-compat aliases (older screens still reference these) ----
-  // Kept so the redesign can land incrementally without breaking every file
-  // at once. New code should use the names above.
+  // The redesign renamed the accent from gold to Maya green; these keep the
+  // many existing `AppTheme.gold` / `AppTheme.goldDeep` call sites working.
+  // New code should prefer `brand` / `brandDeep`.
+  static const Color gold = brand;
+  static const Color goldDeep = brandDeep;
   static const Color warmBg = bg;
   static const Color warmCard = elevated;
-  static const Color primary = gold;
+  static const Color primary = brand;
   static const Color darkSurface = darkElevated;
   static const Color darkCard = darkElevated;
-  static const Color statPurple = goldDeep;
-  static const Color statOrange = gold;
+  static const Color statPurple = brandDeep;
+  static const Color statOrange = warning;
   static const Color statRed = danger;
   static const Color statGreen = success;
-  static const List<Color> heroGradient = [Color(0xFF2C2A26), Color(0xFF413B31)];
-  static const List<Color> primaryGradient = [gold, goldDeep];
+  static const List<Color> primaryGradient = [brand, brandDeep];
 
   /// Legacy subject color list (still used by the old subject dialog until the
   /// redesigned picker lands). Mapped onto the spine palette.
@@ -77,6 +86,10 @@ class AppTheme {
 
   // ---- Type ----
   static const String fontFamily = 'InstrumentSans';
+
+  /// Brand display font (Poppins, OFL) — used only for the "Semestra"
+  /// wordmark / logo lockup, not for body UI.
+  static const String brandFont = 'Poppins';
 
   /// Tabular-figures style — apply to any run of times / dates / counts so
   /// digits share a fixed advance width and columns stay aligned.
@@ -112,8 +125,8 @@ class AppTheme {
           height: 1.25,
         );
     return TextTheme(
-      displayLarge: t(30, FontWeight.w600),
-      headlineMedium: t(24, FontWeight.w600),
+      displayLarge: t(30, FontWeight.w700),
+      headlineMedium: t(24, FontWeight.w700),
       titleLarge: t(20, FontWeight.w600),
       titleMedium: t(15.5, FontWeight.w600),
       bodyLarge: t(15.5, FontWeight.w400),
@@ -125,7 +138,7 @@ class AppTheme {
   }
 
   static ThemeData get lightTheme {
-    final muted = ink.withOpacity(0.62);
+    final muted = ink.withOpacity(0.55);
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -134,9 +147,10 @@ class AppTheme {
       canvasColor: bg,
       cardColor: elevated,
       colorScheme: ColorScheme.light(
-        primary: gold,
-        onPrimary: Colors.white,
-        secondary: goldDeep,
+        primary: brand,
+        onPrimary: ink,
+        secondary: brandDeep,
+        onSecondary: Colors.white,
         surface: elevated,
         onSurface: ink,
         error: danger,
@@ -150,7 +164,7 @@ class AppTheme {
           fontFamily: fontFamily,
           color: ink,
           fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
         iconTheme: const IconThemeData(color: ink),
       ),
@@ -160,36 +174,36 @@ class AppTheme {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: ink.withOpacity(0.08)),
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: ink.withOpacity(0.06)),
         ),
       ),
-      dividerTheme: DividerThemeData(color: ink.withOpacity(0.10), thickness: 1),
+      dividerTheme: DividerThemeData(color: ink.withOpacity(0.08), thickness: 1),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: ink,
-          foregroundColor: bg,
+          backgroundColor: brand,
+          foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 17),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 15.5,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: goldDeep,
-          side: const BorderSide(color: gold, width: 1.4),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          foregroundColor: brandDeep,
+          side: const BorderSide(color: brand, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 17),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 15.5,
           ),
         ),
@@ -197,18 +211,18 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: elevated,
-        hintStyle: TextStyle(color: ink.withOpacity(0.40)),
+        hintStyle: TextStyle(color: ink.withOpacity(0.36)),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: ink.withOpacity(0.12)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: ink.withOpacity(0.10)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: ink.withOpacity(0.12)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: ink.withOpacity(0.10)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: gold, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: brand, width: 1.6),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -227,9 +241,9 @@ class AppTheme {
       canvasColor: darkBg,
       cardColor: darkElevated,
       colorScheme: ColorScheme.dark(
-        primary: gold,
-        onPrimary: darkBg,
-        secondary: gold,
+        primary: brand,
+        onPrimary: ink,
+        secondary: brand,
         surface: darkElevated,
         onSurface: darkInk,
         error: danger,
@@ -243,7 +257,7 @@ class AppTheme {
           fontFamily: fontFamily,
           color: darkInk,
           fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
         iconTheme: IconThemeData(color: darkInk),
       ),
@@ -253,7 +267,7 @@ class AppTheme {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           side: BorderSide(color: Colors.white.withOpacity(0.06)),
         ),
       ),
@@ -261,29 +275,29 @@ class AppTheme {
           DividerThemeData(color: Colors.white.withOpacity(0.08), thickness: 1),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: darkInk,
-          foregroundColor: darkBg,
+          backgroundColor: brand,
+          foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 17),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 15.5,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: gold,
-          side: const BorderSide(color: gold, width: 1.4),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          foregroundColor: brand,
+          side: const BorderSide(color: brand, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 17),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 15.5,
           ),
         ),
@@ -293,16 +307,16 @@ class AppTheme {
         fillColor: darkElevated,
         hintStyle: TextStyle(color: darkInk.withOpacity(0.40)),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: gold, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: brand, width: 1.6),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
