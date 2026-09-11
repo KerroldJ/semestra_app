@@ -20,7 +20,7 @@ import '../../../semester/presentation/providers/semester_provider.dart';
 import '../../../../core/widgets/compose_sheet.dart' show showComposeSheet;
 
 /// Home — the dashboard matching the requested design with a top header,
-/// animated character banner (Welcome.mp4), 4-metric stats row, and Today / Due next cards.
+/// mascot banner, 4-metric stats row, and Today / Due next cards.
 class TodayPage extends ConsumerWidget {
   const TodayPage({super.key});
 
@@ -80,7 +80,6 @@ class TodayPage extends ConsumerWidget {
     final groups = UrgencyGroups.from(items, now);
     final dueNext = [...groups.overdue, ...groups.thisWeek, ...groups.later];
     final dueSoonCount = groups.overdue.length + groups.thisWeek.length;
-    final notesCount = items.where((i) => i.type == ItemType.note).length;
 
     // Academic standing / Focus level proxy
     final work = items.where((i) => i.type != ItemType.note).toList();
@@ -104,6 +103,11 @@ class TodayPage extends ConsumerWidget {
     final username = profile?.username.isNotEmpty == true
         ? profile!.username
         : 'there';
+    final greeting = now.hour < 12
+        ? 'Good morning'
+        : now.hour < 18
+            ? 'Good afternoon'
+            : 'Good evening';
 
     final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
     final textMuted = isDark ? Colors.white60 : const Color(0xFF6B7280);
@@ -164,30 +168,6 @@ class TodayPage extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Stack(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.notifications_none_rounded,
-                        size: 25,
-                        color: textPrimary,
-                      ),
-                      onPressed: () => context.push('/settings'),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 12,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF00C566),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -213,25 +193,20 @@ class TodayPage extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(24),
                 child: Stack(
                   children: [
-                    // Mascot Video on the Right
+                    // Mascot on the Right
                     Positioned(
-                      top: -6,
+                      top: -8,
                       bottom: -6,
-                      right: -10,
-                      width: 175,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: const VideoBackground(
-                          key: ValueKey('hero_mascot_character_mp4'),
-                          asset: 'assets/mp4/Welcome.mp4',
-                          placeholderColor: Colors.transparent,
-                          fit: BoxFit.contain,
-                        ),
+                      right: -6,
+                      width: 202,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+                        child: _IdleMascot(message: greeting),
                       ),
                     ),
                     // Banner Text on the Left
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 150, 20),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 206, 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -563,6 +538,134 @@ class _CardAction {
   final IconData? icon;
   final VoidCallback onTap;
   const _CardAction(this.label, this.icon, this.onTap);
+}
+
+class _IdleMascot extends StatefulWidget {
+  final String message;
+
+  const _IdleMascot({required this.message});
+
+  @override
+  State<_IdleMascot> createState() => _IdleMascotState();
+}
+
+class _IdleMascotState extends State<_IdleMascot> {
+  @override
+  Widget build(BuildContext context) => _MascotGreeting(message: widget.message);
+}
+
+class _MascotGreeting extends StatelessWidget {
+  final String message;
+
+  const _MascotGreeting({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final bubbleColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.white.withValues(alpha: 0.9);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F5132);
+
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        Positioned(
+          left: 18,
+          right: 8,
+          bottom: 0,
+          top: 22,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0A7D43).withValues(alpha: 0.12),
+                  blurRadius: 22,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+            child: reduceMotion
+                ? Image.asset(
+                    'assets/images/mascot_idle.png',
+                    fit: BoxFit.contain,
+                  )
+                : const VideoBackground(
+                    key: ValueKey('hero_mascot_blink_large_mp4'),
+                    asset: 'assets/mp4/mascot_blink_large.mp4',
+                    placeholderColor: Colors.transparent,
+                    fit: BoxFit.contain,
+                  ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 18,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                constraints: const BoxConstraints(minHeight: 30),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : const Color(0x3323A365),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  message,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: textColor,
+                    height: 1.05,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 24,
+                bottom: -5,
+                child: Transform.rotate(
+                  angle: 0.785398,
+                  child: Container(
+                    width: 11,
+                    height: 11,
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      border: Border(
+                        right: BorderSide(
+                          color: isDark ? Colors.white10 : const Color(0x3323A365),
+                        ),
+                        bottom: BorderSide(
+                          color: isDark ? Colors.white10 : const Color(0x3323A365),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// A centered empty-state card matching the light rounded card design.

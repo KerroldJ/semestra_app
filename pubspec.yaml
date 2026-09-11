@@ -74,6 +74,8 @@ flutter:
 
   assets:
     - assets/mp4/Welcome.mp4
+    - assets/mp4/mascot_blink_large.mp4
+    - assets/images/mascot_idle.png
 
   fonts:
     - family: InstrumentSans
