@@ -219,174 +219,206 @@ class _ActiveHero extends StatelessWidget {
                 ? 'Final day'
                 : '$daysLeft ${daysLeft == 1 ? 'day' : 'days'} left';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.accent(context);
+    final textColor = AppTheme.text(context);
+    final muted = AppTheme.textMuted(context);
+
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.brand, AppTheme.brandDeep],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.brand.withValues(alpha: 0.32),
-            blurRadius: 26,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        border: Border.all(color: AppTheme.hairlineBorder(context)),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Soft brand glow, top-right — a touch of green for depth.
+            Positioned(
+              top: -60,
+              right: -40,
+              child: Container(
+                width: 180,
+                height: 180,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'ACTIVE TERM',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              if (started && !ended)
-                Text(
-                  'Week $week of $weeks',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.brand.withValues(alpha: isDark ? 0.16 : 0.10),
+                      AppTheme.brand.withValues(alpha: 0.0),
+                    ],
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            semester.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              height: 1.05,
+              ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '${DateFormat('MMM d, yyyy').format(semester.startDate)} – ${DateFormat('MMM d, yyyy').format(semester.endDate)}',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Progress track
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                started && !ended ? '$pct% complete' : progressLabel,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (started && !ended)
-                Text(
-                  progressLabel,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.25),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              _HeroStat(
-                value: '$subjectCount',
-                label: subjectCount == 1 ? 'Subject' : 'Subjects',
-              ),
-              Container(
-                width: 1,
-                height: 34,
-                margin: const EdgeInsets.symmetric(horizontal: 18),
-                color: Colors.white.withValues(alpha: 0.22),
-              ),
-              _HeroStat(
-                value: unitsStr,
-                label: totalUnits == 1 ? 'Unit' : 'Units',
-              ),
-              const Spacer(),
-              Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: onManage,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 11),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.tune_rounded,
-                            size: 17, color: AppTheme.brandDeep),
-                        const SizedBox(width: 7),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.soft(AppTheme.brand, 0.14),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ACTIVE TERM',
+                              style: TextStyle(
+                                color: accent,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      if (started && !ended)
                         Text(
-                          'Manage',
+                          'Week $week of $weeks',
                           style: TextStyle(
-                            color: AppTheme.brandDeep,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
+                            color: muted,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    semester.name,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      height: 1.05,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${DateFormat('MMM d, yyyy').format(semester.startDate)} – ${DateFormat('MMM d, yyyy').format(semester.endDate)}',
+                    style: TextStyle(
+                      color: muted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Progress track
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        started && !ended ? '$pct% complete' : progressLabel,
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (started && !ended)
+                        Text(
+                          progressLabel,
+                          style: TextStyle(
+                            color: muted,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppTheme.brand),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      _HeroStat(
+                        value: '$subjectCount',
+                        label: subjectCount == 1 ? 'Subject' : 'Subjects',
+                      ),
+                      Container(
+                        width: 1,
+                        height: 34,
+                        margin: const EdgeInsets.symmetric(horizontal: 18),
+                        color: AppTheme.hairlineBorder(context),
+                      ),
+                      _HeroStat(
+                        value: unitsStr,
+                        label: totalUnits == 1 ? 'Unit' : 'Units',
+                      ),
+                      const Spacer(),
+                      Material(
+                        color: AppTheme.soft(AppTheme.brand, 0.14),
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: onManage,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 11),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.tune_rounded,
+                                    size: 17, color: accent),
+                                const SizedBox(width: 7),
+                                Text(
+                                  'Manage',
+                                  style: TextStyle(
+                                    color: accent,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -405,8 +437,8 @@ class _HeroStat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: AppTheme.text(context),
             fontSize: 22,
             fontWeight: FontWeight.w800,
             height: 1.0,
@@ -416,7 +448,7 @@ class _HeroStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.82),
+            color: AppTheme.textMuted(context),
             fontSize: 11.5,
             fontWeight: FontWeight.w500,
           ),
@@ -519,7 +551,7 @@ class _SemesterSheetState extends ConsumerState<_SemesterSheet> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkBg : AppTheme.warmBg,
+          color: isDark ? Theme.of(context).scaffoldBackgroundColor : AppTheme.warmBg,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
@@ -634,7 +666,7 @@ class _DateField extends StatelessWidget {
         height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : Colors.white,
+          color: isDark ? Theme.of(context).cardColor : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark

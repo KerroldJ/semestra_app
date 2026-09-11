@@ -46,7 +46,7 @@ class _SplashPageState extends State<SplashPage>
     final lightColor = isDark ? const Color(0xFF86FFB8) : const Color(0xFF2EE67B);
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBg : Colors.white,
+      backgroundColor: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
       body: Center(
         child: AnimatedBuilder(
           animation: _animation,

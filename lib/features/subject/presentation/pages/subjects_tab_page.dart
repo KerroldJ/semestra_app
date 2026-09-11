@@ -201,6 +201,9 @@ class _SubjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spine = AppTheme.spineFor(subject.colorValue);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // In dark themes the spine greens are too dim for data text; use white.
+    final dataColor = isDark ? Colors.white : spine;
     final notes = items.where((i) => i.type == ItemType.note).length;
     final tasks = items
         .where((i) => i.type != ItemType.note && !i.isCompleted)
@@ -246,8 +249,8 @@ class _SubjectCard extends StatelessWidget {
               if (subject.units > 0)
                 Pill(
                   text: '${subject.units} u',
-                  bg: AppTheme.soft(spine, 0.12),
-                  fg: spine,
+                  bg: AppTheme.soft(spine, isDark ? 0.22 : 0.12),
+                  fg: dataColor,
                 ),
               if (onEdit != null) ...[
                 const SizedBox(width: 8),
@@ -296,21 +299,21 @@ class _SubjectCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.soft(spine, 0.12),
+                      color: AppTheme.soft(spine, isDark ? 0.22 : 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.calendar_today_rounded,
-                            size: 12, color: spine),
+                            size: 12, color: dataColor),
                         const SizedBox(width: 4),
                         Text(
                           daysStr,
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
-                            color: spine,
+                            color: dataColor,
                           ),
                         ),
                         if (timeStr.isNotEmpty) ...[
@@ -320,7 +323,7 @@ class _SubjectCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
-                              color: spine,
+                              color: dataColor,
                             ),
                           ),
                         ],
@@ -333,7 +336,7 @@ class _SubjectCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.darkElevated
+                          ? Theme.of(context).cardColor
                           : AppTheme.hairline.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -343,9 +346,7 @@ class _SubjectCard extends StatelessWidget {
                         Icon(
                           Icons.room_outlined,
                           size: 12,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withValues(alpha: 0.65)
-                              : AppTheme.inkMuted,
+                          color: isDark ? Colors.white : AppTheme.inkMuted,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -353,9 +354,7 @@ class _SubjectCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withValues(alpha: 0.65)
-                                : AppTheme.inkMuted,
+                            color: isDark ? Colors.white : AppTheme.inkMuted,
                           ),
                         ),
                       ],
@@ -377,7 +376,8 @@ class _SubjectCard extends StatelessWidget {
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.merge(AppTheme.tnum)),
+                        ?.merge(AppTheme.tnum)
+                        .copyWith(color: isDark ? Colors.white : null)),
             ],
           ),
         ],
@@ -393,15 +393,19 @@ class _Meta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Icon(icon,
             size: 15,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withValues(alpha: 0.40)
-                : AppTheme.inkFaint),
+            color: isDark ? Colors.white : AppTheme.inkFaint),
         const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isDark ? Colors.white : null,
+              ),
+        ),
       ],
     );
   }

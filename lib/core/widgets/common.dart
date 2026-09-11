@@ -65,7 +65,7 @@ class _CircleButton extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return Material(
-      color: isDark ? AppTheme.darkCard : Colors.white,
+      color: isDark ? Theme.of(context).cardColor : Colors.white,
       shape: const CircleBorder(),
       elevation: 0,
       child: InkWell(
@@ -140,7 +140,7 @@ class SoftCard extends StatelessWidget {
     final card = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? (isDark ? AppTheme.darkCard : Colors.white),
+        color: color ?? (isDark ? Theme.of(context).cardColor : Colors.white),
         borderRadius: BorderRadius.circular(radius),
         boxShadow: isDark
             ? null
@@ -261,7 +261,7 @@ class Pill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: bg ?? (isDark ? AppTheme.darkElevated : const Color(0xFFF0EFF3)),
+        color: bg ?? (isDark ? Theme.of(context).cardColor : const Color(0xFFF0EFF3)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -327,7 +327,7 @@ class SpineCard extends StatelessWidget {
     final content = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkElevated : AppTheme.elevated,
+        color: isDark ? Theme.of(context).cardColor : AppTheme.elevated,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: highlighted
@@ -441,7 +441,7 @@ class ActionTile extends StatelessWidget {
     final color = tint ?? AppTheme.brandDeep;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : Colors.white,
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: isDark ? Colors.white.withOpacity(0.06) : AppTheme.hairline),
@@ -554,28 +554,31 @@ class HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.text(context);
+    final muted = AppTheme.textMuted(context);
+    final border = AppTheme.hairlineBorder(context);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppTheme.heroGradient,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.heroGradient.last.withOpacity(0.45),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        border: Border.all(color: border),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
-            // Soft brand glow, top-right — gives the flat gradient some depth.
+            // Soft brand glow, top-right — a touch of green for depth.
             Positioned(
               top: -50,
               right: -40,
@@ -586,7 +589,7 @@ class HeroCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppTheme.brand.withOpacity(0.28),
+                      AppTheme.brand.withOpacity(isDark ? 0.18 : 0.10),
                       AppTheme.brand.withOpacity(0.0),
                     ],
                   ),
@@ -614,7 +617,7 @@ class HeroCard extends StatelessWidget {
                               subtitle,
                               style: TextStyle(
                                 fontFamily: AppTheme.fontFamily,
-                                color: Colors.white.withOpacity(0.58),
+                                color: muted,
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -653,9 +656,9 @@ class HeroCard extends StatelessWidget {
                   const SizedBox(height: 22),
                   Text(
                     headline,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppTheme.fontFamily,
-                      color: Colors.white,
+                      color: textColor,
                       fontSize: 23,
                       fontWeight: FontWeight.w700,
                       height: 1.2,
@@ -666,15 +669,12 @@ class HeroCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.only(top: 18),
                       decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                              color: Colors.white.withOpacity(0.12)),
-                        ),
+                        border: Border(top: BorderSide(color: border)),
                       ),
                       child: IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: _footerCells(),
+                          children: _footerCells(context),
                         ),
                       ),
                     ),
@@ -686,7 +686,7 @@ class HeroCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress!.clamp(0.0, 1.0),
                         minHeight: 6,
-                        backgroundColor: Colors.white.withOpacity(0.14),
+                        backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
                         valueColor: const AlwaysStoppedAnimation<Color>(
                             AppTheme.brand),
                       ),
@@ -697,7 +697,7 @@ class HeroCard extends StatelessWidget {
                         progressLabel!,
                         style: TextStyle(
                           fontFamily: AppTheme.fontFamily,
-                          color: Colors.white.withOpacity(0.58),
+                          color: muted,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -713,12 +713,12 @@ class HeroCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _footerCells() {
+  List<Widget> _footerCells(BuildContext context) {
     final cells = <Widget>[];
     void divider() => cells.add(Container(
           width: 1,
           margin: const EdgeInsets.symmetric(horizontal: 8),
-          color: Colors.white.withOpacity(0.12),
+          color: AppTheme.hairlineBorder(context),
         ));
     for (final s in stats) {
       if (cells.isNotEmpty) divider();
@@ -744,8 +744,7 @@ class _StandingCell extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(standing.icon,
-                size: 13, color: Colors.white.withOpacity(0.6)),
+            Icon(standing.icon, size: 13, color: AppTheme.accent(context)),
             const SizedBox(width: 5),
             Flexible(
               child: Text(
@@ -754,7 +753,7 @@ class _StandingCell extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: AppTheme.fontFamily,
-                  color: Colors.white.withOpacity(0.55),
+                  color: AppTheme.textMuted(context),
                   fontSize: 10.5,
                   fontWeight: FontWeight.w500,
                 ),
@@ -765,9 +764,9 @@ class _StandingCell extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           standing.value,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: AppTheme.fontFamily,
-            color: Colors.white,
+            color: AppTheme.text(context),
             fontSize: 15,
             fontWeight: FontWeight.w800,
           ),
@@ -778,7 +777,7 @@ class _StandingCell extends StatelessWidget {
           child: LinearProgressIndicator(
             value: standing.progress.clamp(0.0, 1.0),
             minHeight: 5,
-            backgroundColor: Colors.white.withOpacity(0.14),
+            backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
             valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.brand),
           ),
         ),
@@ -794,9 +793,9 @@ class _Greeting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(
+    final style = TextStyle(
       fontFamily: AppTheme.fontFamily,
-      color: Colors.white,
+      color: AppTheme.text(context),
       fontSize: 18,
       fontWeight: FontWeight.w700,
     );
@@ -816,7 +815,7 @@ class _Greeting extends StatelessWidget {
           ),
           const SizedBox(width: 2),
           Icon(Icons.chevron_right_rounded,
-              size: 22, color: Colors.white.withOpacity(0.75)),
+              size: 22, color: AppTheme.accent(context)),
         ],
       ),
     );
@@ -834,12 +833,12 @@ class _StatCell extends StatelessWidget {
       children: [
         Text(
           stat.value,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: AppTheme.fontFamily,
-            color: Colors.white,
+            color: AppTheme.text(context),
             fontSize: 19,
             fontWeight: FontWeight.w800,
-            fontFeatures: [FontFeature.tabularFigures()],
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(height: 2),
@@ -847,7 +846,7 @@ class _StatCell extends StatelessWidget {
           stat.label,
           style: TextStyle(
             fontFamily: AppTheme.fontFamily,
-            color: Colors.white.withOpacity(0.55),
+            color: AppTheme.textMuted(context),
             fontSize: 11.5,
             fontWeight: FontWeight.w500,
           ),

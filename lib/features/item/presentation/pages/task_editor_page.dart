@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:semestra_app/features/item/domain/entities/item_entity.dart';
 import 'package:semestra_app/features/item/presentation/providers/item_provider.dart';
-import '../../../../core/theme/app_theme.dart';
 
 class TaskEditorPage extends ConsumerStatefulWidget {
   const TaskEditorPage({super.key});
@@ -76,7 +75,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: isDark ? AppTheme.darkBg : const Color(0xFFF9FAFC),
+        backgroundColor: isDark ? Theme.of(context).scaffoldBackgroundColor : const Color(0xFFF9FAFC),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,

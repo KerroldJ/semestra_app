@@ -61,7 +61,7 @@ class NavigationShell extends StatelessWidget {
               child: Container(
                 height: 66,
                 decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkElevated : Colors.white,
+                  color: isDark ? Theme.of(context).cardColor : Colors.white,
                   borderRadius: BorderRadius.circular(26),
                   border: Border.all(
                     color: isDark

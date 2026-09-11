@@ -58,10 +58,20 @@ class AppTheme {
   static const Color warning = Color(0xFFF5A524); // due soon
   static const Color success = Color(0xFF0A7D43); // done / positive
 
-  // ---- Dark palette ----
+  // ---- Dark palette (Midnight — the default dark theme) ----
   static const Color darkBg = Color(0xFF0A0D0B);
   static const Color darkElevated = Color(0xFF151916);
   static const Color darkInk = Color(0xFFECF1ED);
+
+  // ---- Charcoal palette (neutral grey) ----
+  static const Color charcoalBg = Color(0xFF16181A);
+  static const Color charcoalElevated = Color(0xFF212427);
+  static const Color charcoalInk = Color(0xFFECEEF0);
+
+  // ---- Slate palette (cool blue-grey) ----
+  static const Color slateBg = Color(0xFF0E1621);
+  static const Color slateElevated = Color(0xFF1B2634);
+  static const Color slateInk = Color(0xFFE7EDF4);
 
   // ---- Back-compat aliases (older screens still reference these) ----
   // The redesign renamed the accent from gold to Maya green; these keep the
@@ -259,40 +269,68 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
-    final muted = darkInk.withOpacity(0.60);
+  /// The default dark theme (Midnight).
+  static ThemeData get darkTheme => _darkFamily(
+        bg: darkBg,
+        elevated: darkElevated,
+        ink: darkInk,
+      );
+
+  /// Neutral-grey dark theme.
+  static ThemeData get charcoalTheme => _darkFamily(
+        bg: charcoalBg,
+        elevated: charcoalElevated,
+        ink: charcoalInk,
+      );
+
+  /// Cool blue-grey dark theme.
+  static ThemeData get slateTheme => _darkFamily(
+        bg: slateBg,
+        elevated: slateElevated,
+        ink: slateInk,
+      );
+
+  /// Shared builder for every dark-family theme. Only the neutral surfaces and
+  /// on-surface ink change between variants; the Maya-green brand accent and
+  /// all component shapes stay identical so the app feels consistent.
+  static ThemeData _darkFamily({
+    required Color bg,
+    required Color elevated,
+    required Color ink,
+  }) {
+    final muted = ink.withOpacity(0.60);
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       fontFamily: fontFamily,
-      scaffoldBackgroundColor: darkBg,
-      canvasColor: darkBg,
-      cardColor: darkElevated,
+      scaffoldBackgroundColor: bg,
+      canvasColor: bg,
+      cardColor: elevated,
       colorScheme: ColorScheme.dark(
         primary: brand,
-        onPrimary: ink,
+        onPrimary: AppTheme.ink,
         secondary: brand,
-        surface: darkElevated,
-        onSurface: darkInk,
+        surface: elevated,
+        onSurface: ink,
         error: danger,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: darkBg,
+        backgroundColor: bg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: fontFamily,
-          color: darkInk,
+          color: ink,
           fontSize: 20,
           fontWeight: FontWeight.w700,
         ),
-        iconTheme: IconThemeData(color: darkInk),
+        iconTheme: IconThemeData(color: ink),
       ),
-      iconTheme: const IconThemeData(color: darkInk),
-      textTheme: _textTheme(darkInk, muted),
+      iconTheme: IconThemeData(color: ink),
+      textTheme: _textTheme(ink, muted),
       cardTheme: CardThemeData(
-        color: darkElevated,
+        color: elevated,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
@@ -333,8 +371,8 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: darkElevated,
-        hintStyle: TextStyle(color: darkInk.withOpacity(0.40)),
+        fillColor: elevated,
+        hintStyle: TextStyle(color: ink.withOpacity(0.40)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
@@ -353,4 +391,92 @@ class AppTheme {
       ),
     );
   }
+
+  // ---- Theme registry (drives the Settings theme picker) ----
+
+  /// All selectable app themes, in display order. The stored key lives in
+  /// `AppSettings.themeMode`; [themeFor] resolves it to a [ThemeData].
+  static const List<AppThemeOption> themeOptions = [
+    AppThemeOption(
+      key: 'light',
+      label: 'Light',
+      description: 'Clean warm paper',
+      isDark: false,
+      previewBg: Color(0xFFEDEDF0),
+      previewCard: Colors.white,
+      previewInk: ink,
+    ),
+    AppThemeOption(
+      key: 'dark',
+      label: 'Midnight',
+      description: 'Deep green-black',
+      isDark: true,
+      previewBg: darkBg,
+      previewCard: darkElevated,
+      previewInk: darkInk,
+    ),
+    AppThemeOption(
+      key: 'charcoal',
+      label: 'Charcoal',
+      description: 'Neutral grey',
+      isDark: true,
+      previewBg: charcoalBg,
+      previewCard: charcoalElevated,
+      previewInk: charcoalInk,
+    ),
+    AppThemeOption(
+      key: 'slate',
+      label: 'Slate',
+      description: 'Cool blue-grey',
+      isDark: true,
+      previewBg: slateBg,
+      previewCard: slateElevated,
+      previewInk: slateInk,
+    ),
+  ];
+
+  /// Resolves a stored theme key to its [ThemeData]. Unknown keys (and the
+  /// legacy `'midnight'` alias) fall back sensibly.
+  static ThemeData themeFor(String key) {
+    switch (key) {
+      case 'dark':
+      case 'midnight':
+        return darkTheme;
+      case 'charcoal':
+        return charcoalTheme;
+      case 'slate':
+        return slateTheme;
+      default:
+        return lightTheme;
+    }
+  }
+
+  /// Metadata for a selectable theme, including swatch-preview colors.
+  static AppThemeOption optionFor(String key) => themeOptions.firstWhere(
+        (o) => o.key == key,
+        orElse: () => themeOptions.first,
+      );
+}
+
+/// Describes one selectable theme for the Settings picker: its persisted [key],
+/// human [label], short [description], whether it renders dark, and the three
+/// colors used to draw its swatch preview.
+class AppThemeOption {
+  final String key;
+  final String label;
+  final String description;
+  final bool isDark;
+  final Color previewBg;
+  final Color previewCard;
+  final Color previewInk;
+
+  const AppThemeOption({
+    required this.key,
+    required this.label,
+    required this.description,
+    required this.isDark,
+    required this.previewBg,
+    required this.previewCard,
+    required this.previewInk,
+  });
 }

@@ -42,12 +42,17 @@ class MyApp extends ConsumerWidget {
     final settings = ref.watch(settingsNotifierProvider);
     final router = ref.watch(appRouterProvider);
 
+    // The selection is explicit (light / midnight / charcoal / slate); the
+    // chosen ThemeData carries its own brightness, so we hand the same theme to
+    // both slots and pin the mode.
+    final selectedTheme = AppTheme.themeFor(settings.themeMode);
+
     return MaterialApp.router(
       title: 'Semestra',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: settings.themeMode == 'dark' ? ThemeMode.dark : ThemeMode.light,
+      theme: selectedTheme,
+      darkTheme: selectedTheme,
+      themeMode: ThemeMode.light,
       scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: router,
       builder: (context, child) {

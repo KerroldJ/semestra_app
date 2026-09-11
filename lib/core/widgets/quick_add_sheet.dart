@@ -72,7 +72,7 @@ class _SheetShell extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkBg : AppTheme.warmBg,
+          color: isDark ? Theme.of(context).scaffoldBackgroundColor : AppTheme.warmBg,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
@@ -205,7 +205,7 @@ class _QuickAddFloating extends StatelessWidget {
                 width: 288,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkBg : Colors.white,
+                  color: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
@@ -616,7 +616,7 @@ class _PickerField extends StatelessWidget {
         height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : Colors.white,
+          color: isDark ? Theme.of(context).cardColor : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark
@@ -764,7 +764,7 @@ class _NewStudySessionSheetState extends ConsumerState<_NewStudySessionSheet> {
                     decoration: BoxDecoration(
                       color: selected
                           ? AppTheme.primary
-                          : (isDark ? AppTheme.darkCard : Colors.white),
+                          : (isDark ? Theme.of(context).cardColor : Colors.white),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: selected
@@ -1082,9 +1082,7 @@ class _NewSubjectSheetState extends ConsumerState<_NewSubjectSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.darkCard
-                    : Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppTheme.hairline),
               ),
@@ -1196,9 +1194,7 @@ class _NewSubjectSheetState extends ConsumerState<_NewSubjectSheet> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.brand
-                            : (Theme.of(context).brightness == Brightness.dark
-                                ? AppTheme.darkCard
-                                : Colors.white),
+                            : Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected

@@ -32,7 +32,7 @@ class _ComposeSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = isDark ? AppTheme.darkElevated : AppTheme.bg;
+    final surface = isDark ? Theme.of(context).cardColor : AppTheme.bg;
 
     final semesters = ref.watch(semesterNotifierProvider).value ?? [];
     final subjects = ref.watch(subjectNotifierProvider).value ?? [];

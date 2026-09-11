@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_toast.dart';
@@ -30,10 +31,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsNotifierProvider);
     final profile = ref.watch(authNotifierProvider).profile;
-    final isDark = settings.themeMode == 'dark';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        // Custom back button without a Tooltip. The default AppBar back button
+        // carries a "Back" tooltip whose overlay calls localToGlobal on the
+        // button; because this route animates in via a SlideTransition
+        // (RenderFractionalTranslation), that target can be unsized mid-frame
+        // and the tooltip overlay asserts. Dropping the tooltip avoids it.
+        leading: IconButton(
+          icon: const BackButtonIcon(),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         top: false,
         child: ListView(
@@ -76,17 +87,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             _Section(
               label: 'Appearance',
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SwitchTile(
-                    icon: isDark
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    title: 'Dark mode',
-                    subtitle: isDark ? 'Warm dark neutrals' : 'Clean warm paper',
-                    value: isDark,
-                    onChanged: (_) => ref
-                        .read(settingsNotifierProvider.notifier)
-                        .toggleThemeMode(),
+                  _ChoiceTile(
+                    icon: Icons.palette_outlined,
+                    title: 'Theme',
+                    value: AppTheme.optionFor(settings.themeMode).label,
+                    onTap: () => context.push('/settings/themes'),
                   ),
                   const _HairlineDivider(),
                   _ChoiceTile(
@@ -333,7 +340,7 @@ class _Section extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkElevated : AppTheme.elevated,
+              color: isDark ? Theme.of(context).cardColor : AppTheme.elevated,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isDark

@@ -648,7 +648,7 @@ class _TimelineRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: event.tint != null
             ? AppTheme.soft(event.tint!, 0.08)
-            : (isDark ? AppTheme.darkCard : Colors.white),
+            : (isDark ? Theme.of(context).cardColor : Colors.white),
         borderRadius: BorderRadius.circular(16),
         border: Border(
           left: BorderSide(color: event.color, width: 4),
