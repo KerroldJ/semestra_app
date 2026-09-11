@@ -411,9 +411,9 @@ class _CalendarCard extends StatelessWidget {
               itemCount: gridDays.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 7,
-                mainAxisSpacing: 6,
+                mainAxisSpacing: 4,
                 crossAxisSpacing: 6,
-                childAspectRatio: 0.95,
+                childAspectRatio: 1.3,
               ),
               itemBuilder: (context, index) {
                 final dayData = gridDays[index];

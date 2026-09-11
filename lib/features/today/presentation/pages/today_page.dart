@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/common.dart';
-import '../../../../core/widgets/video_background.dart';
 import '../../../auth/presentation/auth_provider.dart';
 import '../../../item/domain/entities/item_entity.dart';
 import '../../../item/presentation/providers/item_provider.dart';
@@ -17,7 +19,7 @@ import '../../../subject/domain/entities/subject_entity.dart';
 import '../../../subject/presentation/providers/subject_provider.dart';
 import '../../../semester/presentation/providers/semester_provider.dart';
 
-import '../../../../core/widgets/compose_sheet.dart' show showComposeSheet;
+import '../../../../core/widgets/quick_add_sheet.dart' show showNewWorkItemSheet;
 
 /// Home — the dashboard matching the requested design with a top header,
 /// mascot banner, 4-metric stats row, and Today / Due next cards.
@@ -115,13 +117,6 @@ class TodayPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF9FBFA),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showComposeSheet(context),
-        backgroundColor: brandGreen,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -172,135 +167,52 @@ class TodayPage extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
 
-            // ---- Hero Banner Card with Animated Mascot Character ----
-            Container(
-              height: 160,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isDark
-                      ? [const Color(0xFF13281E), const Color(0xFF0B1912)]
-                      : [const Color(0xFFEAF7EE), const Color(0xFFDDF3E7), const Color(0xFFE5F5EC)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isDark ? Colors.white10 : const Color(0x221B8755),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Stack(
-                  children: [
-                    // Mascot on the Right
-                    Positioned(
-                      top: -8,
-                      bottom: -6,
-                      right: -6,
-                      width: 202,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-                        child: _IdleMascot(message: greeting),
-                      ),
-                    ),
-                    // Banner Text on the Left
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 206, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                '\u{2728} ',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: brandGreen,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  dueSoonCount == 0
-                                      ? "You're all caught up"
-                                      : '$dueSoonCount ${dueSoonCount == 1 ? 'task' : 'tasks'} due this week',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontFamily: AppTheme.fontFamily,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w800,
-                                    color: textPrimary,
-                                    height: 1.2,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Keep up the great work!',
-                            style: TextStyle(
-                              fontFamily: AppTheme.fontFamily,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
-                              color: textMuted,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Your goals are within reach.',
-                            style: TextStyle(
-                              fontFamily: AppTheme.fontFamily,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
-                              color: textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // ---- Hero Banner Card with Background and Mascot Character ----
+            _TodayHeroBanner(
+              now: now,
+              dueSoonCount: dueSoonCount,
             ),
             const SizedBox(height: 22),
 
             // ---- 4 Metrics Stats Row ----
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _StatCell(
-                    value: '$dueSoonCount',
-                    label: 'Tasks This Week',
-                    icon: Icons.calendar_today_outlined,
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _StatCell(
+                      value: '$dueSoonCount',
+                      label: 'Tasks This Week',
+                      icon: Icons.calendar_today_outlined,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _StatCell(
-                    value: '${todays.length}',
-                    label: 'Classes Today',
-                    icon: Icons.calendar_month_outlined,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCell(
+                      value: '${todays.length}',
+                      label: 'Classes Today',
+                      icon: Icons.calendar_month_outlined,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _StatCell(
-                    value: '${dueNext.length}',
-                    label: 'Pending Tasks',
-                    icon: Icons.assignment_outlined,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCell(
+                      value: '${dueNext.length}',
+                      label: 'Pending Tasks',
+                      icon: Icons.assignment_outlined,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _StatCell(
-                    value: standingLabel,
-                    label: 'Focus Level',
-                    icon: Icons.sentiment_satisfied_alt_rounded,
-                    isHighlight: true,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatCell(
+                      value: standingLabel,
+                      label: 'Focus Level',
+                      icon: Icons.sentiment_satisfied_alt_rounded,
+                      isHighlight: true,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 28),
 
@@ -308,8 +220,6 @@ class TodayPage extends ConsumerWidget {
             _SectionTitle(
               icon: Icons.wb_sunny_outlined,
               title: 'Today',
-              actionLabel: 'See all',
-              onAction: () => context.push('/schedule'),
             ),
             const SizedBox(height: 14),
             if (todays.isEmpty)
@@ -351,8 +261,13 @@ class TodayPage extends ConsumerWidget {
                 title: "You're all caught up. No pending deliverables.",
                 subtitle: "Get a head start on next term's tasks.",
                 actions: [
-                  _CardAction('Create Task', Icons.add_rounded,
-                      () => context.push('/assignments/edit')),
+                  _CardAction('Create Task', Icons.add_rounded, () {
+                    if (subjects.isEmpty) {
+                      AppToast.error('You need to create a subject first');
+                      return;
+                    }
+                    showNewWorkItemSheet(context, ItemType.task);
+                  }),
                   _CardAction('Resource Library', Icons.folder_open_rounded,
                       () => context.go('/notes')),
                 ],
@@ -414,61 +329,70 @@ class _StatCell extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
     final textMuted = isDark ? Colors.white54 : const Color(0xFF6B7280);
-    final greenColor = const Color(0xFF0A7D43);
+    final accent = AppTheme.accent(context);
+    final valueColor = isHighlight ? accent : textPrimary;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isHighlight)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: const Color(0xFF00C566)),
-              const SizedBox(width: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: greenColor,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : const Color(0x11000000),
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-              ),
-            ],
-          )
-        else
+              ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 17, color: accent),
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: AppTheme.fontFamily,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
-              color: textPrimary,
+              color: valueColor,
             ),
           ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            if (!isHighlight) ...[
-              Icon(icon, size: 11, color: textMuted),
-              const SizedBox(width: 3),
-            ],
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTheme.fontFamily,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: textMuted,
-                ),
-              ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 10,
+              height: 1.2,
+              fontWeight: FontWeight.w500,
+              color: textMuted,
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -540,130 +464,310 @@ class _CardAction {
   const _CardAction(this.label, this.icon, this.onTap);
 }
 
-class _IdleMascot extends StatefulWidget {
-  final String message;
+class _TodayHeroBanner extends StatefulWidget {
+  final DateTime now;
+  final int dueSoonCount;
 
-  const _IdleMascot({required this.message});
+  const _TodayHeroBanner({
+    required this.now,
+    required this.dueSoonCount,
+  });
 
   @override
-  State<_IdleMascot> createState() => _IdleMascotState();
+  State<_TodayHeroBanner> createState() => _TodayHeroBannerState();
 }
 
-class _IdleMascotState extends State<_IdleMascot> {
+class _TodayHeroBannerState extends State<_TodayHeroBanner> {
+  Timer? _timer;
+  DateTime _clock = DateTime.now();
+
   @override
-  Widget build(BuildContext context) => _MascotGreeting(message: widget.message);
-}
+  void initState() {
+    super.initState();
+    // Live clock — ticks every second beside the date.
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _clock = DateTime.now());
+    });
+  }
 
-class _MascotGreeting extends StatelessWidget {
-  final String message;
-
-  const _MascotGreeting({required this.message});
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final now = widget.now;
+    final dueSoonCount = widget.dueSoonCount;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final bubbleColor = isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.9);
-    final textColor = isDark ? Colors.white : const Color(0xFF0F5132);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.bottomCenter,
-      children: [
-        Positioned(
-          left: 18,
-          right: 8,
-          bottom: 0,
-          top: 22,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0A7D43).withValues(alpha: 0.12),
-                  blurRadius: 22,
-                  spreadRadius: 4,
-                ),
-              ],
-            ),
-            child: reduceMotion
-                ? Image.asset(
-                    'assets/images/mascot_idle.png',
-                    fit: BoxFit.contain,
-                  )
-                : const VideoBackground(
-                    key: ValueKey('hero_mascot_blink_large_mp4'),
-                    asset: 'assets/mp4/mascot_blink_large.mp4',
-                    placeholderColor: Colors.transparent,
-                    fit: BoxFit.contain,
-                  ),
-          ),
-        ),
-        Positioned(
-          top: 0,
-          right: 18,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                constraints: const BoxConstraints(minHeight: 30),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : const Color(0x3323A365),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  message,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontFamily,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                    height: 1.05,
-                  ),
-                ),
+    final greetingWord1 = 'Good';
+    final greetingWord2 = now.hour < 12
+        ? 'morning'
+        : now.hour < 18
+            ? 'afternoon'
+            : 'evening';
+
+    final textHeading = isDark ? Colors.white : const Color(0xFF0D3B2C);
+    final textDate = isDark ? const Color(0xFF8FD8B3) : const Color(0xFF3B6756);
+    final textSubtitle = isDark ? Colors.white70 : const Color(0xFF4A6B5E);
+    final bubbleBg = isDark ? const Color(0xFF152A20) : Colors.white;
+    final bubbleTextTitle = isDark ? Colors.white : const Color(0xFF103A2B);
+    final bubbleTextBody = isDark ? Colors.white70 : const Color(0xFF4A6B5E);
+    final bubbleBorder = isDark ? Colors.white12 : const Color(0x1F1B8755);
+
+    final dateStr = DateFormat('EEEE, MMM d, yyyy').format(now);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth;
+        final isCompact = cardWidth < 440;
+
+        // Proportional regions keep the three-part composition
+        // (text · bubble · mascot) balanced across phone and tablet widths.
+        final mascotWidth = isCompact ? cardWidth * 0.40 : 190.0;
+        final textWidth = isCompact ? cardWidth * 0.40 : cardWidth * 0.36;
+
+        return Container(
+          width: double.infinity,
+          height: isCompact ? 196 : 210,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.07),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
-              Positioned(
-                right: 24,
-                bottom: -5,
-                child: Transform.rotate(
-                  angle: 0.785398,
-                  child: Container(
-                    width: 11,
-                    height: 11,
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. Illustrated Campus Background Image
+                Image.asset(
+                  'assets/images/Background.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
                     decoration: BoxDecoration(
-                      color: bubbleColor,
-                      border: Border(
-                        right: BorderSide(
-                          color: isDark ? Colors.white10 : const Color(0x3323A365),
-                        ),
-                        bottom: BorderSide(
-                          color: isDark ? Colors.white10 : const Color(0x3323A365),
-                        ),
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF13281E), const Color(0xFF0B1912)]
+                            : [const Color(0xFFEAF7EE), const Color(0xFFDDF3E7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                if (isDark)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.32),
+                  ),
+
+                // 2. Mascot Character on Right (bottom-anchored, prominent)
+                Positioned(
+                  right: -6,
+                  bottom: -6,
+                  top: 4,
+                  width: mascotWidth,
+                  child: Image.asset(
+                    'assets/images/Welcome.png',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.bottomRight,
+                  ),
+                ),
+
+                // 3. Left Text Section (Good morning, Date, Underline, Goals)
+                Positioned(
+                  left: 18,
+                  top: 12,
+                  bottom: 12,
+                  width: textWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$greetingWord1\n$greetingWord2',
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: isCompact ? 20 : 24,
+                          fontWeight: FontWeight.w800,
+                          color: textHeading,
+                          height: 1.05,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 2,
+                        children: [
+                          Text(
+                            dateStr,
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontSize: isCompact ? 11 : 12,
+                              fontWeight: FontWeight.w600,
+                              color: textDate,
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.schedule_rounded,
+                                  size: isCompact ? 11 : 12, color: textDate),
+                              const SizedBox(width: 3),
+                              Text(
+                                DateFormat('h:mm:ss a').format(_clock),
+                                style: TextStyle(
+                                  fontFamily: AppTheme.fontFamily,
+                                  fontSize: isCompact ? 11 : 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: textDate,
+                                ).merge(AppTheme.tnum),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 34,
+                        height: 2.5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B8755),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Keep up the great work!\nYour goals are within reach.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: isCompact ? 10 : 11,
+                          fontWeight: FontWeight.w500,
+                          color: textSubtitle,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 4. White Speech Bubble — upper-center, overlapping the
+                //    mascot's head so it reads as the mascot "speaking".
+                Positioned(
+                  left: textWidth + 6,
+                  right: mascotWidth * 0.52,
+                  top: isCompact ? 14 : 18,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Decorative sparkle accent above the bubble.
+                      Positioned(
+                        top: -9,
+                        left: -3,
+                        child: Icon(
+                          Icons.auto_awesome,
+                          size: 14,
+                          color: const Color(0xFFF5B301),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isCompact ? 8 : 12,
+                          vertical: isCompact ? 7 : 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bubbleBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: bubbleBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    dueSoonCount == 0
+                                        ? "You're all caught up! ✨"
+                                        : '$dueSoonCount ${dueSoonCount == 1 ? 'task' : 'tasks'} due! ✨',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: AppTheme.fontFamily,
+                                      fontSize: isCompact ? 11.5 : 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: bubbleTextTitle,
+                                      height: 1.15,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              dueSoonCount == 0
+                                  ? 'Nothing urgent right now. Enjoy your free time!'
+                                  : 'Check upcoming deadlines and stay on schedule!',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontFamily,
+                                fontSize: isCompact ? 10 : 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: bubbleTextBody,
+                                height: 1.25,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Speech-bubble tail pointing down toward the mascot.
+                      Positioned(
+                        right: 22,
+                        bottom: -5,
+                        child: Transform.rotate(
+                          angle: 0.785398,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: bubbleBg,
+                              border: Border(
+                                right: BorderSide(color: bubbleBorder),
+                                bottom: BorderSide(color: bubbleBorder),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

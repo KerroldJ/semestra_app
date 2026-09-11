@@ -75,9 +75,7 @@ class _SheetShell extends StatelessWidget {
           color: isDark ? Theme.of(context).scaffoldBackgroundColor : AppTheme.warmBg,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: SafeArea(
-          top: false,
-          child: Column(
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 10),
@@ -93,12 +91,11 @@ class _SheetShell extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: child,
               ),
             ],
           ),
-        ),
       ),
     );
   }
@@ -511,6 +508,15 @@ class _NewWorkItemSheetState extends ConsumerState<_NewWorkItemSheet> {
     final title = _title.text.trim();
     if (title.isEmpty) {
       AppToast.error('Give it a title');
+      return;
+    }
+    final subjects = ref.read(subjectNotifierProvider).value ?? [];
+    if (subjects.isEmpty) {
+      AppToast.error('You need to create a subject first');
+      return;
+    }
+    if (_subjectId == null) {
+      AppToast.error('Please select a subject');
       return;
     }
     ref.read(itemNotifierProvider.notifier).addItem(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -37,10 +38,29 @@ class NavigationShell extends StatelessWidget {
         return Scaffold(
           // Let the body flow behind the floating bar.
           extendBody: true,
-          body: child,
-          floatingActionButton: isFabHidden
-              ? null
-              : Padding(
+          body: NotificationListener<UserScrollNotification>(
+            onNotification: (n) {
+              // Hide the nav island + compose button while scrolling down,
+              // reveal them when scrolling back up.
+              if (n.direction == ScrollDirection.reverse) {
+                fabHiddenNotifier.value = true;
+              } else if (n.direction == ScrollDirection.forward) {
+                fabHiddenNotifier.value = false;
+              }
+              return false;
+            },
+            child: child,
+          ),
+          floatingActionButton: AnimatedSlide(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            offset: isFabHidden ? const Offset(0, 2.4) : Offset.zero,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: isFabHidden ? 0 : 1,
+              child: IgnorePointer(
+                ignoring: isFabHidden,
+                child: Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: FloatingActionButton(
                     onPressed: () => showComposeSheet(context),
@@ -53,34 +73,42 @@ class NavigationShell extends StatelessWidget {
                     child: const Icon(Icons.add_rounded, size: 28, color: Colors.white),
                   ),
                 ),
+              ),
+            ),
+          ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           bottomNavigationBar: SafeArea(
             top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-              child: Container(
-                height: 66,
-                decoration: BoxDecoration(
-                  color: isDark ? Theme.of(context).cardColor : Colors.white,
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : AppTheme.hairline,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
-                      blurRadius: 28,
-                      offset: const Offset(0, 12),
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              offset: isFabHidden ? const Offset(0, 1.6) : Offset.zero,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                child: Container(
+                  height: 66,
+                  decoration: BoxDecoration(
+                    color: isDark ? Theme.of(context).cardColor : Colors.white,
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : AppTheme.hairline,
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    for (final t in _navItems)
-                      Expanded(child: _Tab(item: t, location: location)),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
+                        blurRadius: 28,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      for (final t in _navItems)
+                        Expanded(child: _Tab(item: t, location: location)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -107,7 +135,10 @@ class _Tab extends StatelessWidget {
       final textColor = AppTheme.accent(context);
 
       return InkResponse(
-        onTap: () => context.go(item.route),
+        onTap: () {
+          fabHiddenNotifier.value = false;
+          context.go(item.route);
+        },
         radius: 36,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

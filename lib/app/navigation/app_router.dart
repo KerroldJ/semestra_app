@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'navigation_shell.dart';
+import '../../core/utils/app_toast.dart' show appNavigatorKey;
 import '../../features/auth/presentation/auth_provider.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/username_page.dart';
@@ -23,7 +24,7 @@ import '../../features/semester/presentation/pages/semester_overview_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/themes_page.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _rootNavigatorKey = appNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Bridges a Riverpod [StateNotifier] to go_router's [Listenable] so the gate

@@ -37,7 +37,7 @@ class SemesterPage extends ConsumerWidget {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
                 children: [
-                  _Header(now: now, count: 0),
+                  _Header(now: now),
                   const SizedBox(height: 20),
                   _EmptySemesters(onCreate: () => showSemesterSheet(context)),
                 ],
@@ -63,7 +63,7 @@ class SemesterPage extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
               children: [
-                _Header(now: now, count: semesters.length),
+                _Header(now: now),
                 const SizedBox(height: 18),
                 if (hero != null) ...[
                   _ActiveHero(
@@ -129,56 +129,163 @@ int _currentWeek(SemesterEntity s, DateTime now) {
 // Header
 // ─────────────────────────────────────────────────────────────────────────
 
+/// Illustrated hero header for the Semesters tab — pairs the studying-mascot
+/// artwork with the title, date, and term-count pill.
 class _Header extends StatelessWidget {
   final DateTime now;
-  final int count;
-  const _Header({required this.now, required this.count});
+  const _Header({required this.now});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                DateFormat('EEEE, MMMM d').format(now),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.65)
-                      : AppTheme.inkMuted,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Semesters',
-                style: theme.textTheme.displayLarge?.copyWith(fontSize: 30),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? Colors.white : const Color(0xFF0D3B2C);
+    final dateColor =
+        isDark ? const Color(0xFF8FD8B3) : const Color(0xFF3B6756);
+    final subColor = isDark ? Colors.white70 : const Color(0xFF4A6B5E);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth;
+        final isCompact = cardWidth < 440;
+        final mascotWidth = isCompact ? cardWidth * 0.42 : 210.0;
+
+        return Container(
+          height: isCompact ? 168 : 180,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-        ),
-        if (count > 0)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: AppTheme.soft(AppTheme.brandFill(context), isDark ? 0.18 : 0.12),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Text(
-              '$count ${count == 1 ? 'term' : 'terms'}',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.accent(context),
-              ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              children: [
+                // Campus-scene background image.
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/SemesterBG.png',
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerRight,
+                    errorBuilder: (_, __, ___) => DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isDark
+                              ? [
+                                  const Color(0xFF13281E),
+                                  const Color(0xFF0B1912),
+                                ]
+                              : [
+                                  const Color(0xFFEAF7EE),
+                                  const Color(0xFFDDF3E7),
+                                ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Darken slightly in dark mode so text stays legible.
+                if (isDark)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.35),
+                    ),
+                  ),
+                // Legibility veil on the left, fading out toward the mascot so
+                // the heading and subtitle stay readable over the artwork.
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: isDark
+                            ? [
+                                Colors.black.withValues(alpha: 0.58),
+                                Colors.black.withValues(alpha: 0.0),
+                              ]
+                            : [
+                                const Color(0xFFE9F6EE).withValues(alpha: 0.97),
+                                const Color(0xFFE9F6EE).withValues(alpha: 0.0),
+                              ],
+                        stops: const [0.0, 0.66],
+                      ),
+                    ),
+                  ),
+                ),
+                // Mascot illustration, bottom-right.
+                Positioned(
+                  right: -8,
+                  bottom: -8,
+                  top: 6,
+                  width: mascotWidth,
+                  child: Image.asset(
+                    'assets/images/Semester.png',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.bottomRight,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+                // Left text block.
+                Positioned(
+                  left: 20,
+                  top: 18,
+                  bottom: 18,
+                  right: mascotWidth * 0.72,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        DateFormat('EEEE, MMMM d').format(now),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: isCompact ? 11.5 : 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: dateColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Semesters',
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: isCompact ? 26 : 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.6,
+                          height: 1.0,
+                          color: titleColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Plan your term and track your progress.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: isCompact ? 11 : 12,
+                          fontWeight: FontWeight.w500,
+                          height: 1.25,
+                          color: subColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-      ],
+        );
+      },
     );
   }
 }

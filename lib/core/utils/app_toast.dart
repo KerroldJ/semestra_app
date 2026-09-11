@@ -7,6 +7,10 @@ import 'package:flutter/material.dart';
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 
+/// Root navigator key, wired into go_router. Its [NavigatorState.overlay] is the
+/// top-level overlay, so toasts inserted here render above pages AND modals.
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 enum _ToastKind { success, info, error }
 
 /// Modern, rounded toast rendered at the TOP of the screen via the app overlay.
@@ -18,9 +22,9 @@ class AppToast {
   static void error(String message) => _show(message, _ToastKind.error);
 
   static void _show(String message, _ToastKind kind) {
-    final messenger = scaffoldMessengerKey.currentState;
-    if (messenger == null) return;
-    final overlay = Overlay.maybeOf(messenger.context, rootOverlay: true);
+    // Insert into the root navigator's overlay so the toast appears above the
+    // current page and any open modal sheets/dialogs.
+    final overlay = appNavigatorKey.currentState?.overlay;
     if (overlay == null) return;
 
     // Replace any visible toast immediately.

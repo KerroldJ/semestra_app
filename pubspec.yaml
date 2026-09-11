@@ -45,10 +45,6 @@ dependencies:
   path_provider: ^2.1.5
   lottie: ^3.1.2
   sqlite3_flutter_libs: ^0.5.42
-  # Cross-platform video (incl. Linux desktop, which video_player lacks).
-  media_kit: ^1.1.11
-  media_kit_video: ^1.2.5
-  media_kit_libs_video: ^1.0.5
 
 dev_dependencies:
   flutter_test:
@@ -73,9 +69,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/mp4/Welcome.mp4
-    - assets/mp4/mascot_blink_large.mp4
-    - assets/images/mascot_idle.png
+    - assets/images/Background.png
+    - assets/images/Welcome.png
+    - assets/images/Semester.png
+    - assets/images/SemesterBG.png
 
   fonts:
     - family: InstrumentSans

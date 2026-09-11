@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:sqflite/sqflite.dart' show databaseFactory;
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'app/navigation/app_router.dart';
@@ -14,7 +13,6 @@ import 'features/settings/presentation/providers/settings_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
 
   // Plain `sqflite` has no web backend. On web we must route all database
   // calls through the FFI/WASM-based factory, otherwise every read/write
