@@ -116,9 +116,10 @@ class _NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final spine = subject != null
         ? AppTheme.spineFor(subject!.colorValue)
-        : AppTheme.inkFaint;
+        : (isDark ? Colors.white24 : AppTheme.inkFaint);
     return SpineCard(
       spine: spine,
       onTap: onTap,
@@ -128,33 +129,48 @@ class _NoteCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(note.title.isEmpty ? 'Untitled note' : note.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  note.title.isEmpty ? 'Untitled Note' : note.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Text(Fmt.dueLabel(note.updatedAt),
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.merge(AppTheme.tnum)),
+              Text(
+                Fmt.dueLabel(note.updatedAt),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.merge(AppTheme.tnum),
+              ),
             ],
           ),
           if (note.content.trim().isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(note.content.trim(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              note.content.trim(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ],
-          if (subject != null) ...[
-            const SizedBox(height: 8),
-            Text(subject!.name,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(color: AppTheme.goldDeep)),
-          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (subject != null)
+                Text(
+                  subject!.name,
+                  style: TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: spine,
+                  ),
+                )
+              else
+                Text('General', style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
         ],
       ),
     );
@@ -193,6 +209,7 @@ class _SubjectFilter extends StatelessWidget {
 
   Widget _chip(BuildContext context, String label, bool selected,
       VoidCallback onTap, Color? spine) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(right: 10),
       child: GestureDetector(
@@ -203,7 +220,11 @@ class _SubjectFilter extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: selected ? AppTheme.gold : AppTheme.hairline,
+              color: selected
+                  ? AppTheme.gold
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : AppTheme.hairline),
               width: selected ? 1.5 : 1,
             ),
           ),
@@ -215,7 +236,7 @@ class _SubjectFilter extends StatelessWidget {
               ],
               Text(label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.ink,
+                        color: isDark ? AppTheme.darkInk : AppTheme.ink,
                         fontWeight:
                             selected ? FontWeight.w600 : FontWeight.w400,
                       )),
@@ -233,14 +254,16 @@ class _EmptyNotes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.sticky_note_2_outlined,
-                size: 34, color: AppTheme.inkFaint),
+            Icon(Icons.sticky_note_2_outlined,
+                size: 34,
+                color: isDark ? Colors.white38 : AppTheme.inkFaint),
             const SizedBox(height: 14),
             Text('No notes yet',
                 style: Theme.of(context).textTheme.titleMedium),

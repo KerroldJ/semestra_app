@@ -103,7 +103,9 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
                   activeSemester?.name ?? 'Academic Terms',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.inkMuted,
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.65)
+                        : AppTheme.inkMuted,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -131,15 +133,19 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
                       '${visibleSubjects.length} ${visibleSubjects.length == 1 ? 'subject' : 'subjects'} · ${totalUnits.toStringAsFixed(totalUnits.truncateToDouble() == totalUnits ? 0 : 1)} units',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.inkMuted,
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.65)
+                            : AppTheme.inkMuted,
                       ),
                     ),
                     GestureDetector(
                       onTap: () => context.push('/semester/overview'),
-                      child: const Text(
+                      child: Text(
                         'Semester Overview',
                         style: TextStyle(
-                          color: AppTheme.brandDeep,
+                          color: theme.brightness == Brightness.dark
+                              ? AppTheme.brand
+                              : AppTheme.brandDeep,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -248,10 +254,15 @@ class _SubjectCard extends StatelessWidget {
                 InkWell(
                   borderRadius: BorderRadius.circular(12),
                   onTap: onEdit,
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.edit_rounded,
-                        color: AppTheme.inkFaint, size: 19),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.40)
+                          : AppTheme.inkFaint,
+                      size: 19,
+                    ),
                   ),
                 ),
               ],
@@ -260,10 +271,15 @@ class _SubjectCard extends StatelessWidget {
                 InkWell(
                   borderRadius: BorderRadius.circular(12),
                   onTap: onDelete,
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.delete_outline_rounded,
-                        color: AppTheme.inkFaint, size: 20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.40)
+                          : AppTheme.inkFaint,
+                      size: 20,
+                    ),
                   ),
                 ),
               ],
@@ -324,15 +340,22 @@ class _SubjectCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.room_outlined,
-                            size: 12, color: AppTheme.inkMuted),
+                        Icon(
+                          Icons.room_outlined,
+                          size: 12,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withValues(alpha: 0.65)
+                              : AppTheme.inkMuted,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           subject.classroom,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.inkMuted,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.65)
+                                : AppTheme.inkMuted,
                           ),
                         ),
                       ],
@@ -372,7 +395,11 @@ class _Meta extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: AppTheme.inkFaint),
+        Icon(icon,
+            size: 15,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.40)
+                : AppTheme.inkFaint),
         const SizedBox(width: 6),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
@@ -397,8 +424,11 @@ class _EmptyNoSemester extends StatelessWidget {
               color: AppTheme.soft(AppTheme.brand, 0.14),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(Icons.calendar_month_rounded,
-                size: 28, color: AppTheme.brandDeep),
+            child: Icon(Icons.calendar_month_rounded,
+                size: 28,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.brand
+                    : AppTheme.brandDeep),
           ),
           const SizedBox(height: 16),
           Text(
@@ -443,8 +473,11 @@ class _EmptyNoSubjects extends StatelessWidget {
               color: AppTheme.soft(AppTheme.brand, 0.14),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(Icons.menu_book_rounded,
-                size: 28, color: AppTheme.brandDeep),
+            child: Icon(Icons.menu_book_rounded,
+                size: 28,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.brand
+                    : AppTheme.brandDeep),
           ),
           const SizedBox(height: 16),
           Text(

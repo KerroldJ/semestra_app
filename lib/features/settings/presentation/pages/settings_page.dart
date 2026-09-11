@@ -318,12 +318,14 @@ class _Section extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: AppTheme.fontFamily,
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.9,
-              color: AppTheme.inkMuted,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : AppTheme.inkMuted,
             ),
           ),
           const SizedBox(height: 10),
@@ -333,7 +335,11 @@ class _Section extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark ? AppTheme.darkElevated : AppTheme.elevated,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.hairline),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : AppTheme.hairline,
+              ),
             ),
             child: child,
           ),
@@ -359,9 +365,11 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        Icon(icon, size: 22, color: AppTheme.inkMuted),
+        Icon(icon,
+            size: 22, color: isDark ? Colors.white70 : AppTheme.inkMuted),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -396,6 +404,7 @@ class _ChoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -403,7 +412,8 @@ class _ChoiceTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: AppTheme.inkMuted),
+            Icon(icon,
+                size: 22, color: isDark ? Colors.white70 : AppTheme.inkMuted),
             const SizedBox(width: 14),
             Expanded(
               child: Text(title, style: Theme.of(context).textTheme.titleMedium),
@@ -413,8 +423,8 @@ class _ChoiceTile extends StatelessWidget {
                     .textTheme
                     .bodyMedium
                     ?.copyWith(color: AppTheme.goldDeep)),
-            const Icon(Icons.chevron_right_rounded,
-                size: 20, color: AppTheme.inkFaint),
+            Icon(Icons.chevron_right_rounded,
+                size: 20, color: isDark ? Colors.white38 : AppTheme.inkFaint),
           ],
         ),
       ),
@@ -425,8 +435,14 @@ class _ChoiceTile extends StatelessWidget {
 class _HairlineDivider extends StatelessWidget {
   const _HairlineDivider();
   @override
-  Widget build(BuildContext context) =>
-      const Divider(height: 24, color: AppTheme.hairline, thickness: 1);
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
+      height: 24,
+      color: isDark ? Colors.white.withValues(alpha: 0.08) : AppTheme.hairline,
+      thickness: 1,
+    );
+  }
 }
 
 class _EditUsernameDialog extends StatefulWidget {

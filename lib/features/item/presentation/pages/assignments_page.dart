@@ -147,9 +147,10 @@ class _AssignmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final spine = subject != null
         ? AppTheme.spineFor(subject!.colorValue)
-        : AppTheme.inkFaint;
+        : (isDark ? Colors.white24 : AppTheme.inkFaint);
     final overdue = item.urgencyFrom(now) == Urgency.overdue;
     // status: 0 = not started, 1 = in progress, 2 = done.
     final progress = item.status == 2 ? 1.0 : (item.status == 1 ? 0.5 : 0.0);
@@ -171,7 +172,9 @@ class _AssignmentCard extends StatelessWidget {
                     ? Icons.check_circle_rounded
                     : Icons.radio_button_unchecked_rounded,
                 size: 22,
-                color: item.isCompleted ? AppTheme.success : AppTheme.inkFaint,
+                color: item.isCompleted
+                    ? AppTheme.success
+                    : (isDark ? Colors.white38 : AppTheme.inkFaint),
               ),
             ),
           ),
@@ -185,7 +188,9 @@ class _AssignmentCard extends StatelessWidget {
                         decoration: item.isCompleted
                             ? TextDecoration.lineThrough
                             : null,
-                        color: item.isCompleted ? AppTheme.inkMuted : null,
+                        color: item.isCompleted
+                            ? (isDark ? Colors.white38 : AppTheme.inkMuted)
+                            : null,
                       ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -213,7 +218,9 @@ class _AssignmentCard extends StatelessWidget {
                           .copyWith(
                             color: overdue
                                 ? AppTheme.danger
-                                : AppTheme.inkMuted,
+                                : (isDark
+                                    ? Colors.white.withValues(alpha: 0.65)
+                                    : AppTheme.inkMuted),
                             fontWeight: FontWeight.w600,
                           ),
                     ),
@@ -243,14 +250,16 @@ class _EmptyAssignments extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.done_all_rounded,
-                size: 36, color: AppTheme.inkFaint),
+            Icon(Icons.done_all_rounded,
+                size: 36,
+                color: isDark ? Colors.white38 : AppTheme.inkFaint),
             const SizedBox(height: 14),
             Text(
               'Nothing due',

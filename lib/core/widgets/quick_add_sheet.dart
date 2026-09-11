@@ -85,7 +85,9 @@ class _SheetShell extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.inkFaint.withOpacity(0.5),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white24
+                      : AppTheme.inkFaint.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -131,11 +133,13 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.9,
-          color: AppTheme.inkMuted,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.65)
+              : AppTheme.inkMuted,
         ),
       ),
     );
@@ -376,9 +380,13 @@ class _NoSubjectsHint extends StatelessWidget {
         color: AppTheme.soft(AppTheme.statOrange, 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Text(
+      child: Text(
         'Add a subject in your Workspace first to attach items to it.',
-        style: TextStyle(color: AppTheme.inkMuted, fontSize: 13),
+        style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white70
+                : AppTheme.inkMuted,
+            fontSize: 13),
       ),
     );
   }
@@ -610,18 +618,26 @@ class _PickerField extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppTheme.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.hairline),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppTheme.hairline,
+          ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 17, color: AppTheme.inkFaint),
+            Icon(icon,
+                size: 17,
+                color: isDark ? Colors.white38 : AppTheme.inkFaint),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: muted ? AppTheme.inkFaint : AppTheme.ink,
+                  color: muted
+                      ? (isDark ? Colors.white38 : AppTheme.inkFaint)
+                      : (isDark ? AppTheme.darkInk : AppTheme.ink),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -713,6 +729,7 @@ class _NewStudySessionSheetState extends ConsumerState<_NewStudySessionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subjects = ref.watch(subjectNotifierProvider).value ?? [];
     _subjectId ??= subjects.isNotEmpty ? subjects.first.id : null;
 
@@ -745,16 +762,24 @@ class _NewStudySessionSheetState extends ConsumerState<_NewStudySessionSheet> {
                     height: 40,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: selected ? AppTheme.primary : Colors.white,
+                      color: selected
+                          ? AppTheme.primary
+                          : (isDark ? AppTheme.darkCard : Colors.white),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: selected ? AppTheme.primary : AppTheme.hairline,
+                        color: selected
+                            ? AppTheme.primary
+                            : (isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : AppTheme.hairline),
                       ),
                     ),
                     child: Text(
                       Fmt.weekdayAbbr[i].substring(0, 1),
                       style: TextStyle(
-                        color: selected ? Colors.white : AppTheme.inkMuted,
+                        color: selected
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : AppTheme.inkMuted),
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -1029,9 +1054,13 @@ class _NewSubjectSheetState extends ConsumerState<_NewSubjectSheet> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'You need to create a semester before adding subjects to it.',
-                    style: TextStyle(color: AppTheme.inkMuted, fontSize: 13),
+                    style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : AppTheme.inkMuted,
+                        fontSize: 13),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
@@ -1172,14 +1201,22 @@ class _NewSubjectSheetState extends ConsumerState<_NewSubjectSheet> {
                                 : Colors.white),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? AppTheme.brand : AppTheme.hairline,
+                          color: isSelected
+                              ? AppTheme.brand
+                              : (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : AppTheme.hairline),
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
                       child: Text(
                         dayLabels[i],
                         style: TextStyle(
-                          color: isSelected ? Colors.white : AppTheme.inkMuted,
+                          color: isSelected
+                              ? Colors.white
+                              : (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white70
+                                  : AppTheme.inkMuted),
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w600,
                           fontSize: 12,

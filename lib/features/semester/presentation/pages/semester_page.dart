@@ -10,8 +10,9 @@ import '../../../subject/presentation/providers/subject_provider.dart';
 import '../../domain/entities/semester_entity.dart';
 import '../providers/semester_provider.dart';
 
-/// Screen — Semesters Management Tab.
-/// Allows viewing, activating, editing, deleting, and creating semesters.
+/// Screen — Semesters Management Tab (default landing screen).
+/// Enterprise layout: an active-term hero with live progress, an overview
+/// metric strip, segmented filters, and refined semester cards.
 class SemesterPage extends ConsumerWidget {
   const SemesterPage({super.key});
 
@@ -19,7 +20,6 @@ class SemesterPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final semestersState = ref.watch(semesterNotifierProvider);
     final subjects = ref.watch(subjectNotifierProvider).value ?? [];
-    final theme = Theme.of(context);
     final now = DateTime.now();
 
     return Scaffold(
@@ -27,42 +27,63 @@ class SemesterPage extends ConsumerWidget {
         bottom: false,
         child: semestersState.when(
           data: (semesters) {
+            int subjCount(SemesterEntity s) =>
+                subjects.where((x) => x.semesterId == s.id).length;
+            double unitsOf(SemesterEntity s) => subjects
+                .where((x) => x.semesterId == s.id)
+                .fold<double>(0.0, (a, x) => a + x.units);
+
+            if (semesters.isEmpty) {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+                children: [
+                  _Header(now: now, count: 0),
+                  const SizedBox(height: 20),
+                  _EmptySemesters(onCreate: () => showSemesterSheet(context)),
+                ],
+              );
+            }
+
+            // Prefer a live/current active term for the hero; fall back to any
+            // flagged-active term.
+            final activeTerms =
+                semesters.where((s) => s.isActive && !s.isArchived).toList();
+            SemesterEntity? hero;
+            for (final s in activeTerms) {
+              if (!now.isBefore(s.startDate) && !now.isAfter(s.endDate)) {
+                hero = s;
+                break;
+              }
+            }
+            hero ??= activeTerms.isNotEmpty ? activeTerms.first : null;
+
+            final visible = [...semesters]
+              ..sort((a, b) => b.startDate.compareTo(a.startDate));
+
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
               children: [
-                Text(
-                  DateFormat('MMMM d').format(now),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.inkMuted,
+                _Header(now: now, count: semesters.length),
+                const SizedBox(height: 18),
+                if (hero != null) ...[
+                  _ActiveHero(
+                    semester: hero,
+                    subjectCount: subjCount(hero),
+                    totalUnits: unitsOf(hero),
+                    now: now,
+                    onManage: () =>
+                        showSemesterSheet(context, existing: hero),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Semesters',
-                  style: theme.textTheme.displayLarge?.copyWith(fontSize: 30),
-                ),
-                const SizedBox(height: 20),
-                if (semesters.isEmpty)
-                  _EmptySemesters(
-                    onCreate: () => showSemesterSheet(context),
-                  )
-                else ...[
-                  ...semesters.map((sem) {
-                    final semSubjects =
-                        subjects.where((s) => s.semesterId == sem.id).toList();
-                    final semUnits = semSubjects.fold<double>(
-                        0.0, (acc, s) => acc + s.units);
-                    return Padding(
+                  const SizedBox(height: 18),
+                ],
+                ...visible.map((sem) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
                       child: _SemesterCard(
                         semester: sem,
-                        subjectCount: semSubjects.length,
-                        totalUnits: semUnits,
+                        subjectCount: subjCount(sem),
+                        totalUnits: unitsOf(sem),
                       ),
-                    );
-                  }),
-                ],
+                    )),
               ],
             );
           },
@@ -71,6 +92,336 @@ class SemesterPage extends ConsumerWidget {
               Center(child: Text('Error loading semesters: $err')),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Term timing helpers
+// ─────────────────────────────────────────────────────────────────────────
+
+double _termProgress(SemesterEntity s, DateTime now) {
+  final total = s.endDate.difference(s.startDate).inSeconds;
+  if (total <= 0) return 0;
+  return (now.difference(s.startDate).inSeconds / total).clamp(0.0, 1.0);
+}
+
+int _totalWeeks(SemesterEntity s) =>
+    (s.endDate.difference(s.startDate).inDays / 7).ceil().clamp(1, 999);
+
+int _currentWeek(SemesterEntity s, DateTime now) {
+  final w = (now.difference(s.startDate).inDays / 7).floor() + 1;
+  return w.clamp(1, _totalWeeks(s));
+}
+
+/// Descriptive term state used for the status pill.
+({String label, Color color}) _termStatus(SemesterEntity s, DateTime now) {
+  if (s.isArchived) return (label: 'Archived', color: AppTheme.inkMuted);
+  if (now.isBefore(s.startDate)) return (label: 'Upcoming', color: AppTheme.brandDeep);
+  if (now.isAfter(s.endDate)) return (label: 'Completed', color: AppTheme.inkMuted);
+  return (label: 'In progress', color: AppTheme.brand);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────────────────
+
+class _Header extends StatelessWidget {
+  final DateTime now;
+  final int count;
+  const _Header({required this.now, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('EEEE, MMMM d').format(now),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.65)
+                      : AppTheme.inkMuted,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Semesters',
+                style: theme.textTheme.displayLarge?.copyWith(fontSize: 30),
+              ),
+            ],
+          ),
+        ),
+        if (count > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: AppTheme.soft(AppTheme.brand, isDark ? 0.18 : 0.12),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Text(
+              '$count ${count == 1 ? 'term' : 'terms'}',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.brand : AppTheme.brandDeep,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Active-term hero — the enterprise centerpiece with live term progress
+// ─────────────────────────────────────────────────────────────────────────
+
+class _ActiveHero extends StatelessWidget {
+  final SemesterEntity semester;
+  final int subjectCount;
+  final double totalUnits;
+  final DateTime now;
+  final VoidCallback onManage;
+
+  const _ActiveHero({
+    required this.semester,
+    required this.subjectCount,
+    required this.totalUnits,
+    required this.now,
+    required this.onManage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = _termProgress(semester, now);
+    final pct = (progress * 100).round();
+    final week = _currentWeek(semester, now);
+    final weeks = _totalWeeks(semester);
+    final daysLeft = semester.endDate.difference(now).inDays;
+    final unitsStr = totalUnits.toStringAsFixed(
+        totalUnits.truncateToDouble() == totalUnits ? 0 : 1);
+    final started = !now.isBefore(semester.startDate);
+    final ended = now.isAfter(semester.endDate);
+
+    final progressLabel = !started
+        ? 'Starts ${DateFormat('MMM d').format(semester.startDate)}'
+        : ended
+            ? 'Term completed'
+            : daysLeft <= 0
+                ? 'Final day'
+                : '$daysLeft ${daysLeft == 1 ? 'day' : 'days'} left';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.brand, AppTheme.brandDeep],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brand.withValues(alpha: 0.32),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'ACTIVE TERM',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              if (started && !ended)
+                Text(
+                  'Week $week of $weeks',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            semester.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '${DateFormat('MMM d, yyyy').format(semester.startDate)} – ${DateFormat('MMM d, yyyy').format(semester.endDate)}',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Progress track
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                started && !ended ? '$pct% complete' : progressLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (started && !ended)
+                Text(
+                  progressLabel,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.25),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _HeroStat(
+                value: '$subjectCount',
+                label: subjectCount == 1 ? 'Subject' : 'Subjects',
+              ),
+              Container(
+                width: 1,
+                height: 34,
+                margin: const EdgeInsets.symmetric(horizontal: 18),
+                color: Colors.white.withValues(alpha: 0.22),
+              ),
+              _HeroStat(
+                value: unitsStr,
+                label: totalUnits == 1 ? 'Unit' : 'Units',
+              ),
+              const Spacer(),
+              Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: onManage,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 11),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.tune_rounded,
+                            size: 17, color: AppTheme.brandDeep),
+                        const SizedBox(width: 7),
+                        Text(
+                          'Manage',
+                          style: TextStyle(
+                            color: AppTheme.brandDeep,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  final String value;
+  final String label;
+  const _HeroStat({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            height: 1.0,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.82),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -259,11 +610,13 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.9,
-              color: AppTheme.inkMuted,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : AppTheme.inkMuted,
             )),
       );
 }
@@ -283,18 +636,26 @@ class _DateField extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppTheme.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.hairline),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppTheme.hairline,
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_rounded,
-                size: 16, color: AppTheme.inkFaint),
+            Icon(Icons.calendar_today_rounded,
+                size: 16,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.40)
+                    : AppTheme.inkFaint),
             const SizedBox(width: 8),
             Expanded(
               child: Text(label,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: AppTheme.ink, fontWeight: FontWeight.w500)),
+                  style: TextStyle(
+                      color: isDark ? AppTheme.darkInk : AppTheme.ink,
+                      fontWeight: FontWeight.w500)),
             ),
           ],
         ),
@@ -323,123 +684,131 @@ class _SemesterCard extends ConsumerWidget {
     final unitsStr = totalUnits.toStringAsFixed(
         totalUnits.truncateToDouble() == totalUnits ? 0 : 1);
 
+    final now = DateTime.now();
+    final status = _termStatus(semester, now);
+    final inProgress = !semester.isArchived &&
+        !now.isBefore(semester.startDate) &&
+        !now.isAfter(semester.endDate);
+    final progress = _termProgress(semester, now);
+
     return SoftCard(
       padding: const EdgeInsets.all(18),
+      color: semester.isArchived && !isDark
+          ? const Color(0xFFF7F7F9)
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      semester.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    ),
-                    if (semester.isArchived)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Pill(
-                          text: 'Archived',
-                          bg: isDark ? Colors.white12 : const Color(0xFFEEEEEE),
-                          fg: AppTheme.inkMuted,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            semester.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Pill(
+                          text: status.label,
+                          bg: AppTheme.soft(
+                              status.color, isDark ? 0.20 : 0.12),
+                          fg: status.color == AppTheme.inkMuted && isDark
+                              ? Colors.white70
+                              : status.color,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: semester.isArchived ? 'Unarchive' : 'Archive',
-                    icon: Icon(
-                      semester.isArchived
-                          ? Icons.unarchive_outlined
-                          : Icons.archive_outlined,
-                      size: 20,
-                      color: semester.isArchived
-                          ? AppTheme.brandDeep
-                          : AppTheme.inkMuted,
-                    ),
-                    onPressed: () {
-                      ref.read(semesterNotifierProvider.notifier).archiveSemester(
-                            semester,
-                            !semester.isArchived,
-                          );
-                      AppToast.success(semester.isArchived
-                          ? '${semester.name} unarchived'
-                          : '${semester.name} archived');
-                    },
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Edit Semester',
-                    icon: const Icon(Icons.edit_outlined,
-                        size: 20, color: AppTheme.inkMuted),
-                    onPressed: () =>
-                        showSemesterSheet(context, existing: semester),
-                  ),
-                ],
+              _MoreMenu(
+                isArchived: semester.isArchived,
+                onEdit: () => showSemesterSheet(context, existing: semester),
+                onArchive: () {
+                  ref.read(semesterNotifierProvider.notifier).archiveSemester(
+                        semester,
+                        !semester.isArchived,
+                      );
+                  AppToast.success(semester.isArchived
+                      ? '${semester.name} unarchived'
+                      : '${semester.name} archived');
+                },
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Wrap(
-            spacing: 12,
+            spacing: 14,
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.date_range_rounded,
-                      size: 15, color: AppTheme.inkFaint),
-                  const SizedBox(width: 6),
-                  Text(
-                    dateRange,
-                    style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.inkMuted),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.menu_book_rounded,
-                      size: 15, color: AppTheme.inkFaint),
-                  const SizedBox(width: 6),
-                  Text(
+              _MetaBit(icon: Icons.date_range_rounded, text: dateRange),
+              _MetaBit(
+                icon: Icons.menu_book_rounded,
+                text:
                     '$subjectCount ${subjectCount == 1 ? 'subject' : 'subjects'} · $unitsStr ${totalUnits == 1 ? 'unit' : 'units'}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.inkMuted),
-                  ),
-                ],
               ),
             ],
           ),
+          if (inProgress) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          isDark ? AppTheme.brand : AppTheme.brandDeep),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.brand : AppTheme.brandDeep,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 14),
           const Divider(height: 1),
           const SizedBox(height: 10),
           Row(
             children: [
               Text(
-                semester.isActive ? 'Active' : 'Inactive',
+                semester.isActive ? 'Active semester' : 'Set as active',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: semester.isActive
-                      ? AppTheme.brandDeep
-                      : AppTheme.inkMuted,
+                      ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.65)
+                          : AppTheme.inkMuted),
                 ),
               ),
               const Spacer(),
               Switch.adaptive(
                 value: semester.isActive,
-                activeColor: AppTheme.brandDeep,
+                activeColor: isDark ? AppTheme.brand : AppTheme.brandDeep,
                 activeTrackColor: AppTheme.soft(AppTheme.brand, 0.4),
                 onChanged: (val) {
                   ref.read(semesterNotifierProvider.notifier).editSemester(
@@ -458,12 +827,89 @@ class _SemesterCard extends ConsumerWidget {
   }
 }
 
+/// Icon + muted text row used for the semester metadata line.
+class _MetaBit extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _MetaBit({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final muted = isDark
+        ? Colors.white.withValues(alpha: 0.65)
+        : AppTheme.inkMuted;
+    final faint = isDark ? Colors.white.withValues(alpha: 0.40) : AppTheme.inkFaint;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: faint),
+        const SizedBox(width: 6),
+        Text(text, style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+      ],
+    );
+  }
+}
+
+/// Overflow menu (edit / archive) replacing the twin icon buttons.
+class _MoreMenu extends StatelessWidget {
+  final bool isArchived;
+  final VoidCallback onEdit;
+  final VoidCallback onArchive;
+  const _MoreMenu({
+    required this.isArchived,
+    required this.onEdit,
+    required this.onArchive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.white70 : AppTheme.inkMuted;
+    return PopupMenuButton<String>(
+      tooltip: 'Options',
+      icon: Icon(Icons.more_horiz_rounded, size: 22, color: iconColor),
+      padding: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      onSelected: (v) => v == 'edit' ? onEdit() : onArchive(),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 18, color: iconColor),
+              const SizedBox(width: 10),
+              const Text('Edit semester'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'archive',
+          child: Row(
+            children: [
+              Icon(
+                isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+                size: 18,
+                color: iconColor,
+              ),
+              const SizedBox(width: 10),
+              Text(isArchived ? 'Unarchive' : 'Archive'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _EmptySemesters extends StatelessWidget {
   final VoidCallback onCreate;
   const _EmptySemesters({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SoftCard(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
       child: Column(
@@ -475,8 +921,9 @@ class _EmptySemesters extends StatelessWidget {
               color: AppTheme.soft(AppTheme.brand, 0.14),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(Icons.calendar_month_rounded,
-                size: 28, color: AppTheme.brandDeep),
+            child: Icon(Icons.calendar_month_rounded,
+                size: 28,
+                color: isDark ? AppTheme.brand : AppTheme.brandDeep),
           ),
           const SizedBox(height: 16),
           Text(

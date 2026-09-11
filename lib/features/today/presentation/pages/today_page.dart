@@ -14,6 +14,7 @@ import '../../../schedule/domain/entities/schedule_entity.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../subject/domain/entities/subject_entity.dart';
 import '../../../subject/presentation/providers/subject_provider.dart';
+import '../../../semester/presentation/providers/semester_provider.dart';
 
 /// Home — the dashboard. A dark hero card (greeting + headline + inline stats
 /// and academic standing), a Today section, a Due-next section (each with a
@@ -26,9 +27,28 @@ class TodayPage extends ConsumerWidget {
     final now = DateTime.now();
     final profile = ref.watch(authNotifierProvider).profile;
     final subjects = ref.watch(subjectNotifierProvider).value ?? [];
-    final items = ref.watch(itemNotifierProvider).value ?? [];
-    final schedules = ref.watch(scheduleNotifierProvider).value ?? [];
+    final allItems = ref.watch(itemNotifierProvider).value ?? [];
+    final allSchedules = ref.watch(scheduleNotifierProvider).value ?? [];
+    final semesters = ref.watch(semesterNotifierProvider).value ?? [];
     final subjectsById = {for (final s in subjects) s.id: s};
+
+    // Scope the dashboard to the active semester only: its subjects, and the
+    // classes / tasks / assignments / notes that belong to those subjects.
+    final activeSemesterIds = {
+      for (final sem in semesters)
+        if (sem.isActive && !sem.isArchived) sem.id,
+    };
+    final activeSubjectIds = {
+      for (final s in subjects)
+        if (activeSemesterIds.contains(s.semesterId)) s.id,
+    };
+    final schedules = allSchedules
+        .where((s) => activeSubjectIds.contains(s.subjectId))
+        .toList();
+    final items = allItems
+        .where((i) => i.subjectId != null &&
+            activeSubjectIds.contains(i.subjectId))
+        .toList();
 
     // Today's non-study classes, sorted by start.
     final todays = schedules
@@ -179,7 +199,9 @@ class TodayPage extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: AppTheme.inkMuted,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.60)
+                      : AppTheme.inkMuted,
                 ),
               ),
               const SizedBox(height: 14),
@@ -207,9 +229,10 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        Icon(icon, size: 19, color: AppTheme.ink),
+        Icon(icon, size: 19, color: isDark ? AppTheme.darkInk : AppTheme.ink),
         const SizedBox(width: 9),
         Expanded(
           child: Text(title,
@@ -220,9 +243,9 @@ class _SectionTitle extends StatelessWidget {
           GestureDetector(
             onTap: onAction,
             child: Text(actionLabel!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppTheme.fontFamily,
-                  color: AppTheme.brandDeep,
+                  color: isDark ? AppTheme.brand : AppTheme.brandDeep,
                   fontWeight: FontWeight.w600,
                   fontSize: 13.5,
                 )),
@@ -255,17 +278,28 @@ class _EmptyStateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.hairline),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : AppTheme.hairline,
+        ),
       ),
       child: Column(
         children: [
-          Icon(icon, size: 26, color: AppTheme.inkFaint),
+          Icon(
+            icon,
+            size: 26,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.40)
+                : AppTheme.inkFaint,
+          ),
           const SizedBox(height: 14),
           Text(
             title,
@@ -301,6 +335,7 @@ class _GhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
@@ -311,13 +346,21 @@ class _GhostButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.hairline),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : AppTheme.hairline,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (action.icon != null) ...[
-                Icon(action.icon, size: 16, color: AppTheme.ink),
+                Icon(
+                  action.icon,
+                  size: 16,
+                  color: isDark ? AppTheme.darkInk : AppTheme.ink,
+                ),
                 const SizedBox(width: 7),
               ],
               Flexible(
@@ -325,11 +368,11 @@ class _GhostButton extends StatelessWidget {
                   action.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: AppTheme.fontFamily,
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.ink,
+                    color: isDark ? AppTheme.darkInk : AppTheme.ink,
                   ),
                 ),
               ),
@@ -416,7 +459,11 @@ class _UpdateCard extends StatelessWidget {
               color: AppTheme.soft(AppTheme.brand, 0.14),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(_icon, size: 18, color: AppTheme.brandDeep),
+            child: Icon(_icon,
+                size: 18,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.brand
+                    : AppTheme.brandDeep),
           ),
           const SizedBox(height: 12),
           Text(
@@ -453,9 +500,10 @@ class _ClassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final spine = subject != null
         ? AppTheme.spineFor(subject!.colorValue)
-        : AppTheme.inkFaint;
+        : (isDark ? Colors.white24 : AppTheme.inkFaint);
     return SpineCard(
       spine: spine,
       highlighted: highlighted,
@@ -504,9 +552,10 @@ class _DueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final spine = subject != null
         ? AppTheme.spineFor(subject!.colorValue)
-        : AppTheme.inkFaint;
+        : (isDark ? Colors.white24 : AppTheme.inkFaint);
     final overdue = item.urgencyFrom(now) == Urgency.overdue;
     return SpineCard(
       spine: spine,
@@ -539,7 +588,11 @@ class _DueCard extends StatelessWidget {
                 .bodyMedium
                 ?.merge(AppTheme.tnum)
                 .copyWith(
-                  color: overdue ? AppTheme.danger : AppTheme.inkMuted,
+                  color: overdue
+                      ? AppTheme.danger
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.65)
+                          : AppTheme.inkMuted),
                   fontWeight: FontWeight.w600,
                 ),
           ),
@@ -556,16 +609,27 @@ class _QuietCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.hairline),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : AppTheme.hairline,
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppTheme.inkFaint),
+          Icon(
+            icon,
+            size: 20,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.40)
+                : AppTheme.inkFaint,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(text, style: Theme.of(context).textTheme.bodyMedium),

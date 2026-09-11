@@ -103,14 +103,8 @@ class _Tab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (isSemester) {
-      final circleBg = active
-          ? AppTheme.brand
-          : (isDark
-              ? AppTheme.soft(AppTheme.brand, 0.22)
-              : AppTheme.soft(AppTheme.brand, 0.14));
-      final iconColor = active ? Colors.white : AppTheme.brandDeep;
       final textColor = active
-          ? AppTheme.brandDeep
+          ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
           : (isDark ? AppTheme.brand : AppTheme.brandDeep);
 
       return InkResponse(
@@ -120,38 +114,48 @@ class _Tab extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              height: 38,
+              height: 40,
               child: Center(
                 child: Container(
-                  width: 38,
-                  height: 38,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: circleBg,
                     shape: BoxShape.circle,
-                    boxShadow: active
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.brand.withValues(alpha: 0.36),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ]
-                        : null,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: active
+                          ? const [Color(0xFF00FF85), Color(0xFF00A854)]
+                          : const [Color(0xFF0FD679), Color(0xFF00B55A)],
+                    ),
+                    border: Border.all(
+                      color: isDark
+                          ? (active ? Colors.white : Colors.white.withValues(alpha: 0.20))
+                          : (active ? AppTheme.brandDeep : Colors.white),
+                      width: active ? 2 : 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.brand.withValues(alpha: active ? 0.50 : 0.35),
+                        blurRadius: active ? 12 : 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Icon(
                     active ? item.activeIcon : item.icon,
-                    size: 21,
-                    color: iconColor,
+                    size: 22,
+                    color: Colors.white,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               item.label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w700,
                 color: textColor,
               ),
             ),
@@ -160,7 +164,9 @@ class _Tab extends StatelessWidget {
       );
     }
 
-    final color = active ? AppTheme.brandDeep : AppTheme.inkFaint;
+    final color = active
+        ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
+        : (isDark ? Colors.white.withOpacity(0.55) : AppTheme.inkFaint);
     return InkResponse(
       onTap: () => context.go(item.route),
       radius: 36,

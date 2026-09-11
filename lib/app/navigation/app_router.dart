@@ -56,7 +56,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/today',
+    initialLocation: '/semesters',
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authNotifierProvider);
@@ -73,13 +73,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         case AuthStatus.ready:
           // Kick users out of the splash / username screen once ready.
           if (loc == splash || loc == username || loc == '/' || loc.isEmpty) {
-            return '/today';
+            return '/semesters';
           }
           return null;
       }
     },
     routes: [
-      GoRoute(path: '/', redirect: (_, __) => '/today'),
+      GoRoute(path: '/', redirect: (_, __) => '/semesters'),
       GoRoute(path: '/splash', builder: (_, __) => const SplashPage()),
       GoRoute(
           path: '/onboarding/username',

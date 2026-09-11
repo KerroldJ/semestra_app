@@ -124,7 +124,10 @@ class _AssignmentEditorPageState extends ConsumerState<AssignmentEditorPage> {
                                   fontWeight: selected
                                       ? FontWeight.w600
                                       : FontWeight.w400,
-                                  color: AppTheme.ink,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? AppTheme.darkInk
+                                      : AppTheme.ink,
                                 )),
                           ],
                         ),
@@ -196,6 +199,7 @@ class _AssignmentEditorPageState extends ConsumerState<AssignmentEditorPage> {
                 ..._steps.asMap().entries.map((e) {
                   final i = e.key;
                   final step = e.value;
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
@@ -209,7 +213,7 @@ class _AssignmentEditorPageState extends ConsumerState<AssignmentEditorPage> {
                                 : Icons.radio_button_unchecked_rounded,
                             color: step.done
                                 ? AppTheme.success
-                                : AppTheme.inkFaint,
+                                : (isDark ? Colors.white38 : AppTheme.inkFaint),
                             size: 22,
                           ),
                         ),
@@ -224,13 +228,18 @@ class _AssignmentEditorPageState extends ConsumerState<AssignmentEditorPage> {
                                   decoration: step.done
                                       ? TextDecoration.lineThrough
                                       : null,
-                                  color: step.done ? AppTheme.inkMuted : null,
+                                  color: step.done
+                                      ? (isDark
+                                          ? Colors.white38
+                                          : AppTheme.inkMuted)
+                                      : null,
                                 ),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              size: 18, color: AppTheme.inkFaint),
+                          icon: Icon(Icons.close_rounded,
+                              size: 18,
+                              color: isDark ? Colors.white38 : AppTheme.inkFaint),
                           onPressed: () =>
                               setState(() => _steps.removeAt(i)),
                         ),
@@ -357,25 +366,34 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.hairline),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppTheme.hairline,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: AppTheme.inkMuted),
+            Icon(icon,
+                size: 15,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.65)
+                    : AppTheme.inkMuted),
             const SizedBox(width: 8),
             Text(label,
                 style: TextStyle(
                   fontFamily: AppTheme.fontFamily,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.ink,
+                  color: isDark ? AppTheme.darkInk : AppTheme.ink,
                 )),
           ],
         ),
@@ -391,8 +409,13 @@ class _PriorityPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const labels = ['Low', 'Medium', 'High'];
-    final colors = [AppTheme.inkMuted, AppTheme.gold, AppTheme.danger];
+    final colors = [
+      isDark ? Colors.white.withValues(alpha: 0.65) : AppTheme.inkMuted,
+      AppTheme.gold,
+      AppTheme.danger,
+    ];
     return PopupMenuButton<int>(
       initialValue: priority,
       onSelected: onChanged,
@@ -434,6 +457,7 @@ class _StatusSegmented extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const labels = ['Not started', 'In progress', 'Done'];
     return Row(
       children: List.generate(3, (i) {
@@ -449,7 +473,11 @@ class _StatusSegmented extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 color: selected ? AppTheme.soft(AppTheme.gold, 0.14) : null,
                 border: Border.all(
-                  color: selected ? AppTheme.gold : AppTheme.hairline,
+                  color: selected
+                      ? AppTheme.gold
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : AppTheme.hairline),
                   width: selected ? 1.4 : 1,
                 ),
               ),
@@ -460,7 +488,11 @@ class _StatusSegmented extends StatelessWidget {
                   fontFamily: AppTheme.fontFamily,
                   fontSize: 12.5,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected ? AppTheme.goldDeep : AppTheme.inkMuted,
+                  color: selected
+                      ? (isDark ? AppTheme.brand : AppTheme.goldDeep)
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.65)
+                          : AppTheme.inkMuted),
                 ),
               ),
             ),

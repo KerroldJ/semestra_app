@@ -66,7 +66,9 @@ class _ComposeSheet extends ConsumerWidget {
                   width: 38,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.inkFaint,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white24
+                        : AppTheme.inkFaint,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -167,10 +169,17 @@ class _ComposeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ringColor = isEnabled ? AppTheme.brand : AppTheme.inkFaint.withValues(alpha: 0.3);
-    final iconColor = isEnabled ? AppTheme.brandDeep : AppTheme.inkFaint;
-    final textColor = isEnabled ? null : AppTheme.inkMuted;
-    final subtitleColor = isEnabled ? AppTheme.inkMuted : AppTheme.inkFaint;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ringColor = isEnabled
+        ? AppTheme.brand
+        : (isDark ? Colors.white24 : AppTheme.inkFaint.withValues(alpha: 0.3));
+    final iconColor = isEnabled
+        ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
+        : (isDark ? Colors.white38 : AppTheme.inkFaint);
+    final textColor = isEnabled ? null : (isDark ? Colors.white38 : AppTheme.inkMuted);
+    final subtitleColor = isEnabled
+        ? (isDark ? Colors.white70 : AppTheme.inkMuted)
+        : (isDark ? Colors.white38 : AppTheme.inkFaint);
 
     return InkWell(
       onTap: isEnabled ? onTap : null,
@@ -187,7 +196,11 @@ class _ComposeOption extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: ringColor, width: 1.5),
-                  color: isEnabled ? null : AppTheme.soft(AppTheme.inkFaint, 0.06),
+                  color: isEnabled
+                      ? null
+                      : (isDark
+                          ? Colors.white10
+                          : AppTheme.soft(AppTheme.inkFaint, 0.06)),
                 ),
                 child: Icon(icon, color: iconColor, size: 21),
               ),
@@ -216,7 +229,7 @@ class _ComposeOption extends StatelessWidget {
               ),
               Icon(
                 isEnabled ? Icons.chevron_right_rounded : Icons.lock_outline_rounded,
-                color: AppTheme.inkFaint,
+                color: isDark ? Colors.white38 : AppTheme.inkFaint,
                 size: isEnabled ? 20 : 16,
               ),
             ],

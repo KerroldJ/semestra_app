@@ -33,7 +33,9 @@ class AppScreenHeader extends StatelessWidget {
                 eyebrow,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.inkMuted,
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.65)
+                      : AppTheme.inkMuted,
                 ),
               ),
               const SizedBox(height: 2),
@@ -195,9 +197,11 @@ class StatTile extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12.5,
-              color: AppTheme.inkMuted,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : AppTheme.inkMuted,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -253,10 +257,11 @@ class Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: bg ?? const Color(0xFFF0EFF3),
+        color: bg ?? (isDark ? AppTheme.darkElevated : const Color(0xFFF0EFF3)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -264,7 +269,8 @@ class Pill extends StatelessWidget {
         style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
-          color: fg ?? AppTheme.inkMuted,
+          color: fg ??
+              (isDark ? Colors.white.withValues(alpha: 0.75) : AppTheme.inkMuted),
         ),
       ),
     );
@@ -324,7 +330,11 @@ class SpineCard extends StatelessWidget {
         color: isDark ? AppTheme.darkElevated : AppTheme.elevated,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: highlighted ? AppTheme.gold : AppTheme.hairline,
+          color: highlighted
+              ? AppTheme.gold
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : AppTheme.hairline),
           width: highlighted ? 1.5 : 1,
         ),
       ),
@@ -364,15 +374,19 @@ class SpineCard extends StatelessWidget {
 class Wordmark extends StatelessWidget {
   final double size;
   final Color? color;
+  final Color? dotColor;
 
   /// Whether to draw the trailing brand-green dot.
   final bool dot;
+  final List<Shadow>? shadows;
 
   const Wordmark({
     super.key,
     this.size = 28,
     this.color,
+    this.dotColor,
     this.dot = true,
+    this.shadows,
   });
 
   @override
@@ -390,13 +404,14 @@ class Wordmark extends StatelessWidget {
           letterSpacing: -0.5,
           color: c,
           height: 1.0,
+          shadows: shadows,
         ),
         children: [
           const TextSpan(text: 'Semestra'),
           if (dot)
-            const TextSpan(
+            TextSpan(
               text: '.',
-              style: TextStyle(color: AppTheme.brand),
+              style: TextStyle(color: dotColor ?? AppTheme.brand),
             ),
         ],
       ),
@@ -850,6 +865,7 @@ class Eyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
       text.toUpperCase(),
       style: TextStyle(
@@ -857,7 +873,8 @@ class Eyebrow extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.9,
-        color: color ?? AppTheme.inkMuted,
+        color: color ??
+            (isDark ? Colors.white.withValues(alpha: 0.65) : AppTheme.inkMuted),
       ),
     );
   }
@@ -899,8 +916,13 @@ class PriorityLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const labels = ['Low', 'Medium', 'High'];
-    final colors = [AppTheme.inkMuted, AppTheme.gold, AppTheme.danger];
+    final colors = [
+      isDark ? Colors.white.withValues(alpha: 0.65) : AppTheme.inkMuted,
+      AppTheme.gold,
+      AppTheme.danger,
+    ];
     final i = priority.clamp(0, 2);
     return StrokeLabel(text: labels[i], color: colors[i]);
   }

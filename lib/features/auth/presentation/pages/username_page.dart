@@ -251,7 +251,9 @@ class _FormSection extends StatelessWidget {
           'This is how Semestra greets you. You can change it anytime in '
           'Settings.',
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: AppTheme.inkMuted,
+            color: theme.brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.65)
+                : AppTheme.inkMuted,
             height: 1.5,
             fontSize: 14.5,
           ),
@@ -265,7 +267,9 @@ class _FormSection extends StatelessWidget {
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
-            color: AppTheme.inkMuted,
+            color: theme.brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.65)
+                : AppTheme.inkMuted,
           ),
         ),
         const SizedBox(height: 8),
@@ -288,7 +292,9 @@ class _FormSection extends StatelessWidget {
             prefixText: '@ ',
             prefixStyle: TextStyle(
               fontFamily: AppTheme.fontFamily,
-              color: AppTheme.inkMuted,
+              color: theme.brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : AppTheme.inkMuted,
               fontSize: 15.5,
               fontWeight: FontWeight.w600,
             ),
@@ -380,19 +386,26 @@ class _Check extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Icon(
           ok ? Icons.check_circle_rounded : Icons.circle_outlined,
           size: 18,
-          color: ok ? AppTheme.success : AppTheme.inkFaint,
+          color: ok
+              ? AppTheme.success
+              : (isDark ? Colors.white38 : AppTheme.inkFaint),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: ok ? AppTheme.ink : AppTheme.inkMuted,
+                  color: ok
+                      ? (isDark ? AppTheme.darkInk : AppTheme.ink)
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.65)
+                          : AppTheme.inkMuted),
                   fontSize: 13.5,
                 ),
           ),

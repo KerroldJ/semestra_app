@@ -374,8 +374,17 @@ class _DeadlineRow extends StatelessWidget {
             Pill(
               text: Fmt.dueLabel(item.dueDate!),
               bg: AppTheme.soft(
-                  overdue ? AppTheme.statRed : AppTheme.inkMuted, 0.12),
-              fg: overdue ? AppTheme.statRed : AppTheme.inkMuted,
+                  overdue
+                      ? AppTheme.statRed
+                      : (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : AppTheme.inkMuted),
+                  0.12),
+              fg: overdue
+                  ? AppTheme.statRed
+                  : (Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : AppTheme.inkMuted),
             ),
         ],
       ),
@@ -392,8 +401,11 @@ class _EmptyHint extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded,
-              color: AppTheme.inkFaint, size: 20),
+          Icon(Icons.check_circle_outline_rounded,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white38
+                  : AppTheme.inkFaint,
+              size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(text, style: Theme.of(context).textTheme.bodyMedium),

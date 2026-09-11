@@ -205,17 +205,19 @@ class _WeekBlocks extends StatelessWidget {
         final weekNo = i + 1;
         final past = weekNo < current;
         final isCurrent = weekNo == current;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
           width: 34,
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
+            color: isCurrent
+                ? AppTheme.soft(AppTheme.brand, 0.2)
+                : (past ? AppTheme.soft(AppTheme.brand, 0.08) : Colors.transparent),
             borderRadius: BorderRadius.circular(8),
-            color: past ? AppTheme.soft(AppTheme.gold, 0.16) : null,
-            border: Border.all(
-              color: isCurrent ? AppTheme.gold : AppTheme.hairline,
-              width: isCurrent ? 1.6 : 1,
-            ),
+            border: isCurrent
+                ? Border.all(color: isDark ? AppTheme.brand : AppTheme.goldDeep, width: 1.5)
+                : null,
           ),
           child: Text(
             '$weekNo',
@@ -224,8 +226,10 @@ class _WeekBlocks extends StatelessWidget {
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: isCurrent
-                  ? AppTheme.goldDeep
-                  : (past ? AppTheme.goldDeep : AppTheme.inkFaint),
+                  ? (isDark ? AppTheme.brand : AppTheme.goldDeep)
+                  : (past
+                      ? (isDark ? AppTheme.brand : AppTheme.goldDeep)
+                      : (isDark ? Colors.white38 : AppTheme.inkFaint)),
             ),
           ),
         );
@@ -239,6 +243,7 @@ class _NoSemester extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -247,6 +252,9 @@ class _NoSemester extends StatelessWidget {
           children: [
             const Icon(Icons.calendar_month_rounded,
                 size: 36, color: AppTheme.inkFaint),
+            Icon(Icons.calendar_month_rounded,
+                size: 36,
+                color: isDark ? Colors.white38 : AppTheme.inkFaint),
             const SizedBox(height: 14),
             Text('No active semester',
                 style: Theme.of(context).textTheme.titleMedium),

@@ -11,6 +11,7 @@ import '../../../schedule/domain/entities/schedule_entity.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../subject/domain/entities/subject_entity.dart';
 import '../../../subject/presentation/providers/subject_provider.dart';
+import '../../../semester/presentation/providers/semester_provider.dart';
 import '../../../settings/presentation/providers/settings_provider.dart';
 
 class PlannerPage extends ConsumerStatefulWidget {
@@ -55,9 +56,28 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsNotifierProvider);
     final subjects = ref.watch(subjectNotifierProvider).value ?? [];
-    final items = ref.watch(itemNotifierProvider).value ?? [];
-    final schedules = ref.watch(scheduleNotifierProvider).value ?? [];
+    final allItems = ref.watch(itemNotifierProvider).value ?? [];
+    final allSchedules = ref.watch(scheduleNotifierProvider).value ?? [];
+    final semesters = ref.watch(semesterNotifierProvider).value ?? [];
     final subjectsById = {for (final s in subjects) s.id: s};
+
+    // Scope the calendar to the active semester only: its subjects, and the
+    // schedules / tasks / assignments that belong to those subjects.
+    final activeSemesterIds = {
+      for (final sem in semesters)
+        if (sem.isActive && !sem.isArchived) sem.id,
+    };
+    final activeSubjectIds = {
+      for (final s in subjects)
+        if (activeSemesterIds.contains(s.semesterId)) s.id,
+    };
+    final schedules = allSchedules
+        .where((s) => activeSubjectIds.contains(s.subjectId))
+        .toList();
+    final items = allItems
+        .where((i) => i.subjectId != null &&
+            activeSubjectIds.contains(i.subjectId))
+        .toList();
 
     final now = DateTime.now();
     final isViewingCurrentMonth =
@@ -120,17 +140,22 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
                             ? 'No events scheduled'
                             : '${events.length} ${events.length == 1 ? 'event' : 'events'} planned',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.inkMuted,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white.withValues(alpha: 0.65)
+                                  : AppTheme.inkMuted,
                             ),
                       ),
                     ],
                   ),
                 ),
                 if (isSelectedToday)
-                  const Pill(
+                  Pill(
                     text: 'Today',
-                    bg: Color(0x2400C566),
-                    fg: AppTheme.brandDeep,
+                    bg: const Color(0x2400C566),
+                    fg: Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.brand
+                        : AppTheme.brandDeep,
                   ),
               ],
             ),
@@ -371,7 +396,9 @@ class _CalendarCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.6,
-                        color: isDark ? AppTheme.inkFaint : AppTheme.inkMuted,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.60)
+                            : AppTheme.inkMuted,
                       ),
                     ),
                   ),
@@ -474,7 +501,7 @@ class _CalendarDayCell extends StatelessWidget {
     } else if (!data.isCurrentMonth) {
       textColor = isDark ? Colors.white24 : const Color(0x3D0B0F0D);
     } else if (data.isToday) {
-      textColor = AppTheme.brandDeep;
+      textColor = isDark ? AppTheme.brand : AppTheme.brandDeep;
     } else {
       textColor = isDark ? AppTheme.darkInk : AppTheme.ink;
     }
@@ -670,8 +697,11 @@ class _EmptyDay extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
       child: Column(
         children: [
-          const Icon(Icons.event_available_rounded,
-              color: AppTheme.inkFaint, size: 28),
+          Icon(Icons.event_available_rounded,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white38
+                  : AppTheme.inkFaint,
+              size: 28),
           const SizedBox(height: 10),
           Text('Nothing planned for this day',
               style: Theme.of(context).textTheme.bodyMedium),

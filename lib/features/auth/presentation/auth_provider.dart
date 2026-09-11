@@ -54,10 +54,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _bootstrap() async {
+    final start = DateTime.now();
     try {
       final existing = await _store.getProfile();
+      final elapsed = DateTime.now().difference(start);
+      final remaining = const Duration(seconds: 5) - elapsed;
+      if (remaining > Duration.zero) {
+        await Future.delayed(remaining);
+      }
       state = AuthState(status: _statusFor(existing), profile: existing);
     } catch (_) {
+      final elapsed = DateTime.now().difference(start);
+      final remaining = const Duration(seconds: 5) - elapsed;
+      if (remaining > Duration.zero) {
+        await Future.delayed(remaining);
+      }
       // Never leave the gate stuck on the splash: fall back to the username
       // screen so the user can still get in.
       state = const AuthState(status: AuthStatus.needsUsername);

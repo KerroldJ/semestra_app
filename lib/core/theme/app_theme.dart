@@ -114,6 +114,34 @@ class AppTheme {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
+  // ---- Dynamic contrast helpers (brightness-aware) ----
+
+  /// Primary text color based on brightness.
+  static Color text(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? darkInk : ink;
+
+  /// Secondary / muted text color based on brightness.
+  static Color textMuted(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? darkInk.withValues(alpha: 0.65)
+          : inkMuted;
+
+  /// Faint / tertiary text color based on brightness.
+  static Color textFaint(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? darkInk.withValues(alpha: 0.38)
+          : inkFaint;
+
+  /// Subtle hairline border color based on brightness.
+  static Color hairlineBorder(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? Colors.white.withValues(alpha: 0.08)
+          : hairline;
+
+  /// Vibrant accent color on background: Maya green in dark mode, deep readable green in light mode.
+  static Color accent(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? brand : brandDeep;
+
   static TextTheme _textTheme(Color onBg, Color muted) {
     TextStyle t(double size, FontWeight w, {Color? c, double? spacing}) =>
         TextStyle(
@@ -261,6 +289,7 @@ class AppTheme {
         ),
         iconTheme: IconThemeData(color: darkInk),
       ),
+      iconTheme: const IconThemeData(color: darkInk),
       textTheme: _textTheme(darkInk, muted),
       cardTheme: CardThemeData(
         color: darkElevated,
