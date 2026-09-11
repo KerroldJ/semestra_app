@@ -73,6 +73,14 @@ class AppTheme {
   static const Color slateElevated = Color(0xFF1B2634);
   static const Color slateInk = Color(0xFFE7EDF4);
 
+  // ---- Tokyo palette (black surfaces, vivid red accent) ----
+  // Pure-black background with near-black cards, and a vivid red accent used
+  // for buttons, icons, the compose button and active states. White text.
+  static const Color tokyoBg = Color(0xFF000000); // pure-black background
+  static const Color tokyoElevated = Color(0xFF151515); // near-black cards
+  static const Color tokyoAccent = Color(0xFFE11D2A); // vivid Tokyo red
+  static const Color tokyoInk = Color(0xFFFFFFFF); // white text & icons
+
   // ---- Back-compat aliases (older screens still reference these) ----
   // The redesign renamed the accent from gold to Maya green; these keep the
   // many existing `AppTheme.gold` / `AppTheme.goldDeep` call sites working.
@@ -148,9 +156,22 @@ class AppTheme {
           ? Colors.white.withValues(alpha: 0.08)
           : hairline;
 
-  /// Vibrant accent color on background: Maya green in dark mode, deep readable green in light mode.
-  static Color accent(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? brand : brandDeep;
+  /// True when the Tokyo theme is active (detected via its vivid-red primary).
+  /// Tokyo swaps the Maya-green accent for red on black surfaces.
+  static bool isTokyo(BuildContext context) =>
+      Theme.of(context).colorScheme.primary == tokyoAccent;
+
+  /// Solid brand fill for the compose button, the active nav item and progress
+  /// bars. Maya green in the default themes; vivid red in Tokyo.
+  static Color brandFill(BuildContext context) =>
+      isTokyo(context) ? tokyoAccent : brand;
+
+  /// Vibrant accent color on background: Maya green in dark mode, deep readable
+  /// green in light mode — but vivid red in Tokyo.
+  static Color accent(BuildContext context) {
+    if (isTokyo(context)) return tokyoAccent;
+    return Theme.of(context).brightness == Brightness.dark ? brand : brandDeep;
+  }
 
   static TextTheme _textTheme(Color onBg, Color muted) {
     TextStyle t(double size, FontWeight w, {Color? c, double? spacing}) =>
@@ -290,13 +311,24 @@ class AppTheme {
         ink: slateInk,
       );
 
+  /// Tokyo theme — black background, dark-red cards & buttons, white text.
+  static ThemeData get tokyoTheme => _darkFamily(
+        bg: tokyoBg,
+        elevated: tokyoElevated,
+        ink: tokyoInk,
+        accent: tokyoAccent,
+      );
+
   /// Shared builder for every dark-family theme. Only the neutral surfaces and
-  /// on-surface ink change between variants; the Maya-green brand accent and
-  /// all component shapes stay identical so the app feels consistent.
+  /// on-surface ink change between variants; component shapes stay identical so
+  /// the app feels consistent. [accent] sets the primary fill (buttons, active
+  /// states, outlines) and defaults to the Maya-green [brand]; Tokyo overrides
+  /// it to dark red.
   static ThemeData _darkFamily({
     required Color bg,
     required Color elevated,
     required Color ink,
+    Color accent = brand,
   }) {
     final muted = ink.withOpacity(0.60);
     return ThemeData(
@@ -307,9 +339,9 @@ class AppTheme {
       canvasColor: bg,
       cardColor: elevated,
       colorScheme: ColorScheme.dark(
-        primary: brand,
-        onPrimary: AppTheme.ink,
-        secondary: brand,
+        primary: accent,
+        onPrimary: Colors.white,
+        secondary: accent,
         surface: elevated,
         onSurface: ink,
         error: danger,
@@ -342,7 +374,7 @@ class AppTheme {
           DividerThemeData(color: Colors.white.withOpacity(0.08), thickness: 1),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: brand,
+          backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 17),
@@ -357,8 +389,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: brand,
-          side: const BorderSide(color: brand, width: 1.5),
+          foregroundColor: accent,
+          side: BorderSide(color: accent, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 17),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -383,7 +415,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: brand, width: 1.6),
+          borderSide: BorderSide(color: accent, width: 1.6),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -433,6 +465,16 @@ class AppTheme {
       previewCard: slateElevated,
       previewInk: slateInk,
     ),
+    AppThemeOption(
+      key: 'tokyo',
+      label: 'Tokyo',
+      description: 'Black with red accent',
+      isDark: true,
+      previewBg: tokyoBg,
+      previewCard: tokyoElevated,
+      previewInk: tokyoInk,
+      previewAccent: tokyoAccent,
+    ),
   ];
 
   /// Resolves a stored theme key to its [ThemeData]. Unknown keys (and the
@@ -446,6 +488,8 @@ class AppTheme {
         return charcoalTheme;
       case 'slate':
         return slateTheme;
+      case 'tokyo':
+        return tokyoTheme;
       default:
         return lightTheme;
     }
@@ -470,6 +514,10 @@ class AppThemeOption {
   final Color previewCard;
   final Color previewInk;
 
+  /// Accent used for the swatch's hero card. Defaults to the Maya-green brand;
+  /// Tokyo overrides it to dark red to match its applied theme.
+  final Color previewAccent;
+
   const AppThemeOption({
     required this.key,
     required this.label,
@@ -478,5 +526,6 @@ class AppThemeOption {
     required this.previewBg,
     required this.previewCard,
     required this.previewInk,
+    this.previewAccent = AppTheme.brand,
   });
 }

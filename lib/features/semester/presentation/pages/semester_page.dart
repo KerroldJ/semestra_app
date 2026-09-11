@@ -115,11 +115,14 @@ int _currentWeek(SemesterEntity s, DateTime now) {
 }
 
 /// Descriptive term state used for the status pill.
-({String label, Color color}) _termStatus(SemesterEntity s, DateTime now) {
+({String label, Color color}) _termStatus(
+    BuildContext context, SemesterEntity s, DateTime now) {
   if (s.isArchived) return (label: 'Archived', color: AppTheme.inkMuted);
-  if (now.isBefore(s.startDate)) return (label: 'Upcoming', color: AppTheme.brandDeep);
+  if (now.isBefore(s.startDate)) {
+    return (label: 'Upcoming', color: AppTheme.accent(context));
+  }
   if (now.isAfter(s.endDate)) return (label: 'Completed', color: AppTheme.inkMuted);
-  return (label: 'In progress', color: AppTheme.brand);
+  return (label: 'In progress', color: AppTheme.accent(context));
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -163,7 +166,7 @@ class _Header extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: AppTheme.soft(AppTheme.brand, isDark ? 0.18 : 0.12),
+              color: AppTheme.soft(AppTheme.brandFill(context), isDark ? 0.18 : 0.12),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Text(
@@ -171,7 +174,7 @@ class _Header extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: isDark ? AppTheme.brand : AppTheme.brandDeep,
+                color: AppTheme.accent(context),
               ),
             ),
           ),
@@ -254,8 +257,8 @@ class _ActiveHero extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppTheme.brand.withValues(alpha: isDark ? 0.16 : 0.10),
-                      AppTheme.brand.withValues(alpha: 0.0),
+                      AppTheme.brandFill(context).withValues(alpha: isDark ? 0.16 : 0.10),
+                      AppTheme.brandFill(context).withValues(alpha: 0.0),
                     ],
                   ),
                 ),
@@ -272,7 +275,7 @@ class _ActiveHero extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppTheme.soft(AppTheme.brand, 0.14),
+                          color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Row(
@@ -361,9 +364,9 @@ class _ActiveHero extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 8,
-                      backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppTheme.brand),
+                      backgroundColor: AppTheme.soft(AppTheme.brandFill(context), 0.16),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.brandFill(context)),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -385,7 +388,7 @@ class _ActiveHero extends StatelessWidget {
                       ),
                       const Spacer(),
                       Material(
-                        color: AppTheme.soft(AppTheme.brand, 0.14),
+                        color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
                         borderRadius: BorderRadius.circular(14),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(14),
@@ -717,7 +720,7 @@ class _SemesterCard extends ConsumerWidget {
         totalUnits.truncateToDouble() == totalUnits ? 0 : 1);
 
     final now = DateTime.now();
-    final status = _termStatus(semester, now);
+    final status = _termStatus(context, semester, now);
     final inProgress = !semester.isArchived &&
         !now.isBefore(semester.startDate) &&
         !now.isAfter(semester.endDate);
@@ -803,9 +806,9 @@ class _SemesterCard extends ConsumerWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 6,
-                      backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          isDark ? AppTheme.brand : AppTheme.brandDeep),
+                      backgroundColor: AppTheme.soft(AppTheme.brandFill(context), 0.16),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppTheme.accent(context)),
                     ),
                   ),
                 ),
@@ -815,7 +818,7 @@ class _SemesterCard extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? AppTheme.brand : AppTheme.brandDeep,
+                    color: AppTheme.accent(context),
                   ),
                 ),
               ],
@@ -831,7 +834,7 @@ class _SemesterCard extends ConsumerWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: semester.isActive
-                      ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
+                      ? AppTheme.accent(context)
                       : (isDark
                           ? Colors.white.withValues(alpha: 0.65)
                           : AppTheme.inkMuted),
@@ -840,8 +843,8 @@ class _SemesterCard extends ConsumerWidget {
               const Spacer(),
               Switch.adaptive(
                 value: semester.isActive,
-                activeColor: isDark ? AppTheme.brand : AppTheme.brandDeep,
-                activeTrackColor: AppTheme.soft(AppTheme.brand, 0.4),
+                activeColor: AppTheme.accent(context),
+                activeTrackColor: AppTheme.soft(AppTheme.brandFill(context), 0.4),
                 onChanged: (val) {
                   ref.read(semesterNotifierProvider.notifier).editSemester(
                         semester.copyWith(isActive: val),
@@ -941,7 +944,6 @@ class _EmptySemesters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SoftCard(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
       child: Column(
@@ -950,12 +952,11 @@ class _EmptySemesters extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: AppTheme.soft(AppTheme.brand, 0.14),
+              color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(Icons.calendar_month_rounded,
-                size: 28,
-                color: isDark ? AppTheme.brand : AppTheme.brandDeep),
+                size: 28, color: AppTheme.accent(context)),
           ),
           const SizedBox(height: 16),
           Text(

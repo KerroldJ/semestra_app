@@ -152,10 +152,8 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
                 if (isSelectedToday)
                   Pill(
                     text: 'Today',
-                    bg: const Color(0x2400C566),
-                    fg: Theme.of(context).brightness == Brightness.dark
-                        ? AppTheme.brand
-                        : AppTheme.brandDeep,
+                    bg: AppTheme.soft(AppTheme.brandFill(context), 0.14),
+                    fg: AppTheme.accent(context),
                   ),
               ],
             ),
@@ -359,13 +357,13 @@ class _CalendarCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppTheme.soft(AppTheme.brand, 0.12),
+                          color: AppTheme.soft(AppTheme.brandFill(context), 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Today',
                           style: TextStyle(
-                            color: AppTheme.brandDeep,
+                            color: AppTheme.accent(context),
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -501,7 +499,7 @@ class _CalendarDayCell extends StatelessWidget {
     } else if (!data.isCurrentMonth) {
       textColor = isDark ? Colors.white24 : const Color(0x3D0B0F0D);
     } else if (data.isToday) {
-      textColor = isDark ? AppTheme.brand : AppTheme.brandDeep;
+      textColor = AppTheme.accent(context);
     } else {
       textColor = isDark ? AppTheme.darkInk : AppTheme.ink;
     }
@@ -509,11 +507,11 @@ class _CalendarDayCell extends StatelessWidget {
     BoxDecoration? decoration;
     if (isSelected) {
       decoration = BoxDecoration(
-        color: AppTheme.brand,
+        color: AppTheme.brandFill(context),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.brand.withValues(alpha: 0.38),
+            color: AppTheme.brandFill(context).withValues(alpha: 0.38),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -521,9 +519,9 @@ class _CalendarDayCell extends StatelessWidget {
       );
     } else if (data.isToday) {
       decoration = BoxDecoration(
-        color: AppTheme.soft(AppTheme.brand, 0.12),
+        color: AppTheme.soft(AppTheme.brandFill(context), 0.12),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.brand, width: 1.5),
+        border: Border.all(color: AppTheme.brandFill(context), width: 1.5),
       );
     }
 
@@ -532,10 +530,13 @@ class _CalendarDayCell extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
-        child: Container(
-          decoration: decoration,
-          alignment: Alignment.center,
-          child: Column(
+        child: Center(
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: decoration,
+            alignment: Alignment.center,
+            child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
@@ -555,6 +556,7 @@ class _CalendarDayCell extends StatelessWidget {
                 isSelected: isSelected,
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -590,7 +592,7 @@ class _EventIndicatorDots extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? Colors.white : AppTheme.brand,
+                color: isSelected ? Colors.white : AppTheme.brandFill(context),
               ),
             ),
           if (hasClass && hasDeadline) const SizedBox(width: 3),

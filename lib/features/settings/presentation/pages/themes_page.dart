@@ -5,8 +5,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../providers/settings_provider.dart';
 
 /// Full-screen theme gallery reached from Settings → Appearance → Theme.
-/// Lists every theme in [AppTheme.themeOptions] with a live mini-preview and
-/// applies the selection instantly.
+/// Lays out every theme in [AppTheme.themeOptions] as a two-column grid of
+/// cards, each with a live mini-preview, and applies the selection instantly.
 class ThemesPage extends ConsumerWidget {
   const ThemesPage({super.key});
 
@@ -19,24 +19,35 @@ class ThemesPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Theme')),
       body: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Pick a look for Semestra. Your choice is saved on this device.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 18),
-            for (final option in AppTheme.themeOptions) ...[
-              _ThemeRow(
-                option: option,
-                selected: option.key == selected.key,
-                onTap: () => ref
-                    .read(settingsNotifierProvider.notifier)
-                    .setThemeMode(option.key),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Text(
+                'Pick a look for Semestra. Your choice is saved on this device.',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-              const SizedBox(height: 14),
-            ],
+            ),
+            Expanded(
+              child: GridView.count(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.70,
+                children: [
+                  for (final option in AppTheme.themeOptions)
+                    _ThemeCard(
+                      option: option,
+                      selected: option.key == selected.key,
+                      onTap: () => ref
+                          .read(settingsNotifierProvider.notifier)
+                          .setThemeMode(option.key),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -44,13 +55,14 @@ class ThemesPage extends ConsumerWidget {
   }
 }
 
-/// A selectable theme card: a mini app-screen preview, the name / description,
-/// and a selection indicator. Selected cards gain a brand-green outline.
-class _ThemeRow extends StatelessWidget {
+/// A selectable theme card laid out vertically for the grid: a mini app-screen
+/// preview on top, then the name / description and a selection indicator.
+/// Selected cards gain a brand-green outline.
+class _ThemeCard extends StatelessWidget {
   final AppThemeOption option;
   final bool selected;
   final VoidCallback onTap;
-  const _ThemeRow({
+  const _ThemeCard({
     required this.option,
     required this.selected,
     required this.onTap,
@@ -66,7 +78,7 @@ class _ThemeRow extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
@@ -75,39 +87,41 @@ class _ThemeRow extends StatelessWidget {
               width: selected ? 2 : 1,
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _MiniPreview(option: option),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
                       option.label,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w700,
+                              ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      option.description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 10),
-                    _StatusChip(selected: selected),
-                  ],
-                ),
+                  ),
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: selected ? accent : AppTheme.textFaint(context),
+                    size: 22,
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(
-                selected
-                    ? Icons.check_circle_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: selected ? accent : AppTheme.textFaint(context),
-                size: 24,
+              const SizedBox(height: 2),
+              Text(
+                option.description,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+              const Spacer(),
+              _StatusChip(selected: selected),
             ],
           ),
         ),
@@ -162,8 +176,8 @@ class _MiniPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final ink = option.previewInk;
     return Container(
-      width: 92,
-      height: 118,
+      width: double.infinity,
+      height: 112,
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
         color: option.previewBg,
@@ -173,20 +187,29 @@ class _MiniPreview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Faux title row.
-          _bar(width: 40, height: 6, color: ink.withValues(alpha: 0.85)),
+          // Faux title row with a small icon so the icon tint is visible.
+          Row(
+            children: [
+              _bar(width: 34, height: 6, color: ink.withValues(alpha: 0.85)),
+              const Spacer(),
+              Icon(Icons.circle, size: 8, color: ink),
+            ],
+          ),
           const SizedBox(height: 8),
-          // Brand hero card.
+          // Accent hero card (reflects the theme's accent color).
           Container(
-            height: 30,
+            height: 28,
             width: double.infinity,
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(9),
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppTheme.brand, AppTheme.brandDeep],
+                colors: [
+                  option.previewAccent,
+                  Color.lerp(option.previewAccent, Colors.black, 0.35)!,
+                ],
               ),
             ),
             child: Column(
@@ -218,12 +241,18 @@ class _MiniPreview extends StatelessWidget {
         color: option.previewCard,
         borderRadius: BorderRadius.circular(7),
       ),
-      alignment: Alignment.centerLeft,
-      child: _bar(width: 34, height: 4, color: ink.withValues(alpha: 0.6)),
+      child: Row(
+        children: [
+          Icon(Icons.circle, size: 6, color: ink),
+          const SizedBox(width: 5),
+          _bar(width: 30, height: 4, color: ink.withValues(alpha: 0.6)),
+        ],
+      ),
     );
   }
 
-  Widget _bar({required double width, required double height, required Color color}) {
+  Widget _bar(
+      {required double width, required double height, required Color color}) {
     return Container(
       width: width,
       height: height,

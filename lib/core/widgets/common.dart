@@ -539,6 +539,11 @@ class HeroCard extends StatelessWidget {
   final double? progress;
   final String? progressLabel;
 
+  /// When true the card renders with no surface (no fill / border / glow) so it
+  /// can sit directly over a background (e.g. the Home video). Legibility is
+  /// expected to come from a scrim behind the card.
+  final bool transparent;
+
   const HeroCard({
     super.key,
     required this.greeting,
@@ -550,6 +555,7 @@ class HeroCard extends StatelessWidget {
     this.onGreetingTap,
     this.progress,
     this.progressLabel,
+    this.transparent = false,
   });
 
   @override
@@ -560,28 +566,31 @@ class HeroCard extends StatelessWidget {
     final border = AppTheme.hairlineBorder(context);
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: border),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-      ),
+      decoration: transparent
+          ? const BoxDecoration()
+          : BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: border),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+            ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
             // Soft brand glow, top-right — a touch of green for depth.
-            Positioned(
-              top: -50,
-              right: -40,
+            if (!transparent)
+              Positioned(
+                top: -50,
+                right: -40,
               child: Container(
                 width: 170,
                 height: 170,
@@ -589,15 +598,16 @@ class HeroCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppTheme.brand.withOpacity(isDark ? 0.18 : 0.10),
-                      AppTheme.brand.withOpacity(0.0),
+                      AppTheme.brandFill(context).withOpacity(isDark ? 0.18 : 0.10),
+                      AppTheme.brandFill(context).withOpacity(0.0),
                     ],
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(22),
+              padding:
+                  transparent ? EdgeInsets.zero : const EdgeInsets.all(22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -631,11 +641,11 @@ class HeroCard extends StatelessWidget {
                           height: 44,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: AppTheme.brand,
+                            color: AppTheme.brandFill(context),
                             borderRadius: BorderRadius.circular(15),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.brand.withOpacity(0.4),
+                                color: AppTheme.brandFill(context).withOpacity(0.4),
                                 blurRadius: 14,
                                 offset: const Offset(0, 6),
                               ),
@@ -643,9 +653,11 @@ class HeroCard extends StatelessWidget {
                           ),
                           child: Text(
                             initials!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: AppTheme.fontFamily,
-                              color: AppTheme.ink,
+                              color: AppTheme.isTokyo(context)
+                                  ? Colors.white
+                                  : AppTheme.ink,
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
                             ),
@@ -686,9 +698,10 @@ class HeroCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress!.clamp(0.0, 1.0),
                         minHeight: 6,
-                        backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppTheme.brand),
+                        backgroundColor:
+                            AppTheme.soft(AppTheme.brandFill(context), 0.16),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.brandFill(context)),
                       ),
                     ),
                     if (progressLabel != null) ...[
@@ -777,8 +790,9 @@ class _StandingCell extends StatelessWidget {
           child: LinearProgressIndicator(
             value: standing.progress.clamp(0.0, 1.0),
             minHeight: 5,
-            backgroundColor: AppTheme.soft(AppTheme.brand, 0.16),
-            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.brand),
+            backgroundColor: AppTheme.soft(AppTheme.brandFill(context), 0.16),
+            valueColor:
+                AlwaysStoppedAnimation<Color>(AppTheme.brandFill(context)),
           ),
         ),
       ],

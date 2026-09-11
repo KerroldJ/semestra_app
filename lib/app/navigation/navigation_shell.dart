@@ -44,7 +44,7 @@ class NavigationShell extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: FloatingActionButton(
                     onPressed: () => showComposeSheet(context),
-                    backgroundColor: AppTheme.brand,
+                    backgroundColor: AppTheme.brandFill(context),
                     foregroundColor: Colors.white,
                     elevation: 5,
                     shape: RoundedRectangleBorder(
@@ -101,11 +101,10 @@ class _Tab extends StatelessWidget {
     final active = location.startsWith(item.route);
     final isSemester = item.route == '/semesters';
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTokyo = AppTheme.isTokyo(context);
 
     if (isSemester) {
-      final textColor = active
-          ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
-          : (isDark ? AppTheme.brand : AppTheme.brandDeep);
+      final textColor = AppTheme.accent(context);
 
       return InkResponse(
         onTap: () => context.go(item.route),
@@ -124,9 +123,11 @@ class _Tab extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: active
-                          ? const [Color(0xFF00FF85), Color(0xFF00A854)]
-                          : const [Color(0xFF0FD679), Color(0xFF00B55A)],
+                      colors: isTokyo
+                          ? const [Color(0xFFF43645), Color(0xFFC1121F)]
+                          : active
+                              ? const [Color(0xFF00FF85), Color(0xFF00A854)]
+                              : const [Color(0xFF0FD679), Color(0xFF00B55A)],
                     ),
                     border: Border.all(
                       color: isDark
@@ -136,7 +137,8 @@ class _Tab extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.brand.withValues(alpha: active ? 0.50 : 0.35),
+                        color: (isTokyo ? AppTheme.tokyoAccent : AppTheme.brand)
+                            .withValues(alpha: active ? 0.50 : 0.35),
                         blurRadius: active ? 12 : 8,
                         offset: const Offset(0, 3),
                       ),
@@ -165,7 +167,7 @@ class _Tab extends StatelessWidget {
     }
 
     final color = active
-        ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
+        ? AppTheme.accent(context)
         : (isDark ? Colors.white.withOpacity(0.55) : AppTheme.inkFaint);
     return InkResponse(
       onTap: () => context.go(item.route),

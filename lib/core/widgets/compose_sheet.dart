@@ -53,7 +53,8 @@ class _ComposeSheet extends ConsumerWidget {
           color: surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
           border: Border.all(
-              color: AppTheme.brand.withValues(alpha: 0.30), width: 1),
+              color: AppTheme.brandFill(context).withValues(alpha: 0.30),
+              width: 1),
         ),
         child: SafeArea(
           top: false,
@@ -171,10 +172,10 @@ class _ComposeOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ringColor = isEnabled
-        ? AppTheme.brand
+        ? AppTheme.brandFill(context)
         : (isDark ? Colors.white24 : AppTheme.inkFaint.withValues(alpha: 0.3));
     final iconColor = isEnabled
-        ? (isDark ? AppTheme.brand : AppTheme.brandDeep)
+        ? AppTheme.accent(context)
         : (isDark ? Colors.white38 : AppTheme.inkFaint);
     final textColor = isEnabled ? null : (isDark ? Colors.white38 : AppTheme.inkMuted);
     final subtitleColor = isEnabled

@@ -143,9 +143,7 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
                       child: Text(
                         'Semester Overview',
                         style: TextStyle(
-                          color: theme.brightness == Brightness.dark
-                              ? AppTheme.brand
-                              : AppTheme.brandDeep,
+                          color: AppTheme.accent(context),
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -237,7 +235,8 @@ class _SubjectCard extends StatelessWidget {
               if (subject.code.isNotEmpty) ...[
                 Text(subject.code,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandDeep, fontWeight: FontWeight.w700)),
+                        color: AppTheme.accent(context),
+                        fontWeight: FontWeight.w700)),
                 const SizedBox(width: 10),
               ],
               Expanded(
@@ -425,14 +424,11 @@ class _EmptyNoSemester extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: AppTheme.soft(AppTheme.brand, 0.14),
+              color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(Icons.calendar_month_rounded,
-                size: 28,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.brand
-                    : AppTheme.brandDeep),
+                size: 28, color: AppTheme.accent(context)),
           ),
           const SizedBox(height: 16),
           Text(
@@ -474,14 +470,11 @@ class _EmptyNoSubjects extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: AppTheme.soft(AppTheme.brand, 0.14),
+              color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(Icons.menu_book_rounded,
-                size: 28,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.brand
-                    : AppTheme.brandDeep),
+                size: 28, color: AppTheme.accent(context)),
           ),
           const SizedBox(height: 16),
           Text(

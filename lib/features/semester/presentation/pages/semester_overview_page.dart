@@ -105,7 +105,7 @@ class _Body extends StatelessWidget {
               child: StatTile(
                   value: '${subjects.length}',
                   label: 'Subjects',
-                  color: AppTheme.goldDeep),
+                  color: AppTheme.accent(context)),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -212,11 +212,13 @@ class _WeekBlocks extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isCurrent
-                ? AppTheme.soft(AppTheme.brand, 0.2)
-                : (past ? AppTheme.soft(AppTheme.brand, 0.08) : Colors.transparent),
+                ? AppTheme.soft(AppTheme.brandFill(context), 0.2)
+                : (past
+                    ? AppTheme.soft(AppTheme.brandFill(context), 0.08)
+                    : Colors.transparent),
             borderRadius: BorderRadius.circular(8),
             border: isCurrent
-                ? Border.all(color: isDark ? AppTheme.brand : AppTheme.goldDeep, width: 1.5)
+                ? Border.all(color: AppTheme.accent(context), width: 1.5)
                 : null,
           ),
           child: Text(
@@ -226,9 +228,9 @@ class _WeekBlocks extends StatelessWidget {
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: isCurrent
-                  ? (isDark ? AppTheme.brand : AppTheme.goldDeep)
+                  ? AppTheme.accent(context)
                   : (past
-                      ? (isDark ? AppTheme.brand : AppTheme.goldDeep)
+                      ? AppTheme.accent(context)
                       : (isDark ? Colors.white38 : AppTheme.inkFaint)),
             ),
           ),
