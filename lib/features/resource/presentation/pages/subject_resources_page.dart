@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_toast.dart';
@@ -38,15 +38,8 @@ class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
       AppToast.error('File no longer exists at ${resource.filePath}');
       return;
     }
-    try {
-      final result = await OpenFilex.open(resource.filePath);
-      if (result.type != ResultType.done && result.type != ResultType.noAppToOpen) {
-        if (result.message.isNotEmpty) {
-          AppToast.info(result.message);
-        }
-      }
-    } catch (e) {
-      AppToast.error('Could not open file: $e');
+    if (mounted) {
+      context.push('/resource/viewer', extra: resource);
     }
   }
 
@@ -191,6 +184,7 @@ class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         backgroundColor: brandFill,
         foregroundColor: Colors.white,
         elevation: 4,
@@ -205,97 +199,240 @@ class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
         child: const Icon(Icons.upload_file_rounded, size: 26),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 100),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
-          // 1. Subject Header / Stats Banner
+          // 1. Illustrated Hero Banner with Resources.png
           Container(
-            padding: const EdgeInsets.all(18),
+            height: 215,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF16231D) : const Color(0xFFEBF7F0),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: brandFill.withValues(alpha: isDark ? 0.2 : 0.3),
+                color: brandFill.withValues(alpha: isDark ? 0.2 : 0.15),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Full Background artwork
+                  Image.asset(
+                    'assets/images/Resources.png',
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerRight,
+                    errorBuilder: (_, __, ___) => Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFFEBF7F0), Color(0xFFD4EFE1)],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Subtle dark mode dimming if dark theme
+                  if (isDark)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+
+                  // Left Hero Content Overlay
+                  Positioned(
+                    left: 18,
+                    top: 18,
+                    bottom: 16,
+                    right: 130,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'LEARN  •  SHARE  •  GROW',
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontFamily,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.4,
+                                color: isDark
+                                    ? const Color(0xFF90C2A9)
+                                    : const Color(0xFF0F4B38),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Resources',
+                              style: TextStyle(
+                                fontFamily: AppTheme.fontFamily,
+                                fontSize: 27,
+                                fontWeight: FontWeight.w900,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF083C2C),
+                                letterSpacing: -0.6,
+                                height: 1.05,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Upload lecture presentations,\nPDFs, datasets, and docs.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                height: 1.3,
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF2C5545),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Quote Pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF1E2C24).withValues(alpha: 0.9)
+                                : Colors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white12
+                                  : Colors.white.withValues(alpha: 0.8),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black
+                                    .withValues(alpha: isDark ? 0.2 : 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.eco_rounded,
+                                size: 16,
+                                color: const Color(0xFF16A34A),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  '“Good materials lead to greater learning!”',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    fontStyle: FontStyle.italic,
+                                    color: isDark
+                                        ? Colors.white
+                                        : const Color(0xFF0D3B2C),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: brandFill.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        Icons.folder_open_rounded,
-                        color: AppTheme.accent(context),
-                        size: 26,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${subjectResources.length} ${subjectResources.length == 1 ? "Resource" : "Resources"}',
-                            style: TextStyle(
-                              fontFamily: AppTheme.fontFamily,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 18,
-                              color: isDark ? Colors.white : const Color(0xFF0D3B2C),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Upload lecture presentations, PDFs, datasets, and docs.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? const Color(0xFF90C2A9) : const Color(0xFF436B5C),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+          ),
+          const SizedBox(height: 12),
+
+          // 2. Four-Category Floating Stats Card (PDF, Slides, Sheets, Docs)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? theme.cardColor : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.hairlineBorder(context)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.035),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-                const SizedBox(height: 14),
-                // Stat Pills
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _StatBadge(
-                      label: 'PDFs',
-                      count: pdfCount,
-                      color: const Color(0xFFE53935),
-                    ),
-                    _StatBadge(
-                      label: 'Slides',
-                      count: pptCount,
-                      color: const Color(0xFFE65100),
-                    ),
-                    _StatBadge(
-                      label: 'Sheets',
-                      count: sheetCount,
-                      color: const Color(0xFF2E7D32),
-                    ),
-                    _StatBadge(
-                      label: 'Docs',
-                      count: docCount,
-                      color: const Color(0xFF1565C0),
-                    ),
-                  ],
+              ],
+            ),
+            child: Row(
+              children: [
+                _StatColumnItem(
+                  icon: Icons.picture_as_pdf_rounded,
+                  iconColor: const Color(0xFFE53935),
+                  iconBgColor: const Color(0xFFFDE8E8),
+                  count: pdfCount,
+                  label: 'PDFs',
+                  isSelected: _filterType == 'PDF',
+                  onTap: () {
+                    setState(() {
+                      _filterType = _filterType == 'PDF' ? 'All' : 'PDF';
+                    });
+                  },
+                ),
+                _buildStatDivider(context),
+                _StatColumnItem(
+                  icon: Icons.slideshow_rounded,
+                  iconColor: const Color(0xFFD97706),
+                  iconBgColor: const Color(0xFFFEF3C7),
+                  count: pptCount,
+                  label: 'Slides',
+                  isSelected: _filterType == 'PPT',
+                  onTap: () {
+                    setState(() {
+                      _filterType = _filterType == 'PPT' ? 'All' : 'PPT';
+                    });
+                  },
+                ),
+                _buildStatDivider(context),
+                _StatColumnItem(
+                  icon: Icons.table_chart_rounded,
+                  iconColor: const Color(0xFF16A34A),
+                  iconBgColor: const Color(0xFFDCFCE7),
+                  count: sheetCount,
+                  label: 'Sheets',
+                  isSelected: _filterType == 'Sheets',
+                  onTap: () {
+                    setState(() {
+                      _filterType = _filterType == 'Sheets' ? 'All' : 'Sheets';
+                    });
+                  },
+                ),
+                _buildStatDivider(context),
+                _StatColumnItem(
+                  icon: Icons.article_rounded,
+                  iconColor: const Color(0xFF2563EB),
+                  iconBgColor: const Color(0xFFDBEAFE),
+                  count: docCount,
+                  label: 'Docs',
+                  isSelected: _filterType == 'Docs',
+                  onTap: () {
+                    setState(() {
+                      _filterType = _filterType == 'Docs' ? 'All' : 'Docs';
+                    });
+                  },
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // 2. Search & Category Filters
+          // 3. Search & Filter Bar
           Container(
             decoration: BoxDecoration(
               color: isDark ? theme.cardColor : Colors.white,
@@ -326,6 +463,11 @@ class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
                       )
                     : null,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
               ),
@@ -637,33 +779,97 @@ class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
       ),
     );
   }
+
+  Widget _buildStatDivider(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: AppTheme.hairlineBorder(context),
+    );
+  }
 }
 
-class _StatBadge extends StatelessWidget {
-  final String label;
+class _StatColumnItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
   final int count;
-  final Color color;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  const _StatBadge({
-    required this.label,
+  const _StatColumnItem({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
     required this.count,
-    required this.color,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        '$count $label',
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: color,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? iconColor.withValues(alpha: isDark ? 0.2 : 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon Box
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? iconColor.withValues(alpha: 0.18)
+                      : iconBgColor,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: 8),
+              // Count & Label
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$count',
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontFamily,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.white : AppTheme.ink,
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white60 : AppTheme.inkMuted,
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

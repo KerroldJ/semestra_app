@@ -63,6 +63,7 @@ class NavigationShell extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: FloatingActionButton(
+                    heroTag: null,
                     onPressed: () => showComposeSheet(context),
                     backgroundColor: AppTheme.brandFill(context),
                     foregroundColor: Colors.white,

@@ -132,6 +132,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: () {
           _showAddScheduleDialog(context, ref, _selectedDayOfWeek());
         },

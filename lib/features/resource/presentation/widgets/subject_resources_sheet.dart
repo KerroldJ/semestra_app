@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_toast.dart';
@@ -42,15 +42,8 @@ class _SubjectResourcesSheetState
       AppToast.error('File no longer exists at ${resource.filePath}');
       return;
     }
-    try {
-      final result = await OpenFilex.open(resource.filePath);
-      if (result.type != ResultType.done && result.type != ResultType.noAppToOpen) {
-        if (result.message.isNotEmpty) {
-          AppToast.info(result.message);
-        }
-      }
-    } catch (e) {
-      AppToast.error('Could not open file: $e');
+    if (mounted) {
+      context.push('/resource/viewer', extra: resource);
     }
   }
 

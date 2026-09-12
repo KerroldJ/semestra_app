@@ -47,19 +47,28 @@ const List<String> kDisallowedImageExtensions = [
 Future<void> showUploadResourceSheet(
   BuildContext context, {
   String? defaultSubjectId,
+  bool? hideSubjectSelector,
 }) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.35),
-    builder: (_) => _UploadResourceSheet(defaultSubjectId: defaultSubjectId),
+    builder: (_) => _UploadResourceSheet(
+      defaultSubjectId: defaultSubjectId,
+      hideSubjectSelector: hideSubjectSelector ?? (defaultSubjectId != null),
+    ),
   );
 }
 
 class _UploadResourceSheet extends ConsumerStatefulWidget {
   final String? defaultSubjectId;
-  const _UploadResourceSheet({this.defaultSubjectId});
+  final bool hideSubjectSelector;
+
+  const _UploadResourceSheet({
+    this.defaultSubjectId,
+    this.hideSubjectSelector = false,
+  });
 
   @override
   ConsumerState<_UploadResourceSheet> createState() =>
@@ -337,73 +346,75 @@ class _UploadResourceSheetState extends ConsumerState<_UploadResourceSheet> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Subject Selector
-                  Text(
-                    'SUBJECT',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                      color: isDark ? Colors.white60 : AppTheme.inkMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (subjects.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Text('No subjects found. Please create a subject first.'),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E2622) : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppTheme.hairlineBorder(context),
-                        ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedSubjectId,
-                          isExpanded: true,
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                          items: subjects.map((SubjectEntity s) {
-                            final spine = AppTheme.spineFor(s.colorValue);
-                            return DropdownMenuItem<String>(
-                              value: s.id,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: spine,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      '${s.code.isNotEmpty ? "${s.code} - " : ""}${s.name}',
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) => setState(() => _selectedSubjectId = val),
-                        ),
+                  if (!widget.hideSubjectSelector) ...[
+                    // Subject Selector
+                    Text(
+                      'SUBJECT',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: isDark ? Colors.white60 : AppTheme.inkMuted,
                       ),
                     ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+                    if (subjects.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Text('No subjects found. Please create a subject first.'),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E2622) : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppTheme.hairlineBorder(context),
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedSubjectId,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                            items: subjects.map((SubjectEntity s) {
+                              final spine = AppTheme.spineFor(s.colorValue);
+                              return DropdownMenuItem<String>(
+                                value: s.id,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: spine,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        '${s.code.isNotEmpty ? "${s.code} - " : ""}${s.name}',
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() => _selectedSubjectId = val),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // File Picker Section
                   Text(

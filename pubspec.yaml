@@ -47,6 +47,9 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.42
   file_picker: ^11.0.3
   open_filex: ^4.7.0
+  pdfx: ^2.11.0
+  csv: ^6.0.0
+  excel: ^4.0.6
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +83,7 @@ flutter:
     - assets/images/CalendarEmptyMascot.png
     - assets/images/Subject.png
     - assets/images/SubjectBG.png
+    - assets/images/Resources.png
 
   fonts:
     - family: InstrumentSans

@@ -24,7 +24,9 @@ import '../../features/semester/presentation/pages/semester_overview_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/themes_page.dart';
 import '../../features/subject/domain/entities/subject_entity.dart';
+import '../../features/resource/domain/entities/resource_entity.dart';
 import '../../features/resource/presentation/pages/subject_resources_page.dart';
+import '../../features/resource/presentation/pages/resource_viewer_page.dart';
 
 final _rootNavigatorKey = appNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -155,6 +157,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, state) =>
             SubjectResourcesPage(subject: state.extra as SubjectEntity),
+      ),
+      GoRoute(
+        path: '/resource/viewer',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) =>
+            ResourceViewerPage(resource: state.extra as ResourceEntity),
       ),
       GoRoute(
         path: '/settings/themes',

@@ -33,6 +33,7 @@ class AssignmentsPage extends ConsumerWidget {
         title: const Text('Assignments'),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: () => context.push('/assignments/edit'),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,

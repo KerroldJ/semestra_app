@@ -19,12 +19,10 @@ import '../providers/subject_provider.dart';
 import '../../../resource/domain/entities/resource_entity.dart';
 import '../../../resource/presentation/providers/resource_provider.dart';
 
-enum _SubjectFilterTab { mySubjects, allSubjects }
-
 enum _SubjectSortOption { code, name, units }
 
 /// Illustrated Subjects Tab Page matching the design system with
-/// mascot artwork, stats overview, segmented filtering, and responsive subject cards.
+/// mascot artwork, stats overview, search, and responsive subject cards.
 class SubjectsTabPage extends ConsumerStatefulWidget {
   const SubjectsTabPage({super.key});
 
@@ -34,9 +32,7 @@ class SubjectsTabPage extends ConsumerStatefulWidget {
 
 class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
   String? _selectedSemesterId;
-  _SubjectFilterTab _currentTab = _SubjectFilterTab.mySubjects;
   _SubjectSortOption _sortOption = _SubjectSortOption.code;
-  bool _isSearchVisible = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -107,13 +103,12 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
       _selectedSemesterId = null;
     }
 
-    // Determine base subjects based on selected tab
-    List<SubjectEntity> displayedSubjects;
-    if (_currentTab == _SubjectFilterTab.mySubjects) {
-      displayedSubjects = activeSemester == null
-          ? <SubjectEntity>[]
-          : subjects.where((s) => s.semesterId == activeSemester!.id).toList();
-    } else {
+    // Determine base subjects (active semester or all subjects)
+    final semester = activeSemester;
+    List<SubjectEntity> displayedSubjects = semester == null
+        ? subjects
+        : subjects.where((s) => s.semesterId == semester.id).toList();
+    if (displayedSubjects.isEmpty && subjects.isNotEmpty) {
       displayedSubjects = subjects;
     }
 
@@ -160,90 +155,72 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
             ),
             const SizedBox(height: 14),
 
-            // 2. Filter Tabs & Actions Row (My Subjects / All Subjects, Search, Filter)
-            _FilterActionRow(
-              currentTab: _currentTab,
-              onTabChanged: (tab) => setState(() => _currentTab = tab),
-              isSearchVisible: _isSearchVisible,
-              onToggleSearch: () {
-                setState(() {
-                  _isSearchVisible = !_isSearchVisible;
-                  if (!_isSearchVisible) {
-                    _searchController.clear();
-                    _searchQuery = '';
-                  }
-                });
-              },
-              currentSort: _sortOption,
-              onSortChanged: (sort) => setState(() => _sortOption = sort),
-            ),
-
-            // Search Bar Input (animated dropdown if active)
-            if (_isSearchVisible) ...[
-              const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1B231F) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.white12 : const Color(0xFFE2E9E4),
+            // 2. Search Bar
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1B231F) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : const Color(0xFFE2E9E4),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search_rounded,
-                      size: 18,
-                      color: isDark ? Colors.white60 : const Color(0xFF6B8074),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        autofocus: true,
-                        style: TextStyle(
-                          fontFamily: AppTheme.fontFamily,
-                          fontSize: 13.5,
-                          color: isDark ? Colors.white : const Color(0xFF0D3B2C),
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Search by code, title, professor, room...',
-                          hintStyle: TextStyle(
-                            fontFamily: AppTheme.fontFamily,
-                            fontSize: 13,
-                            color: isDark ? Colors.white38 : const Color(0xFF8B9E94),
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onChanged: (val) => setState(() => _searchQuery = val),
-                      ),
-                    ),
-                    if (_searchQuery.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 16),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      ),
-                  ],
-                ),
+                ],
               ),
-            ],
-
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 18,
+                    color: isDark ? Colors.white60 : const Color(0xFF6B8074),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 13.5,
+                        color: isDark ? Colors.white : const Color(0xFF0D3B2C),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search by code, title, professor, room...',
+                        hintStyle: TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: 13,
+                          color: isDark ? Colors.white38 : const Color(0xFF8B9E94),
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                ],
+              ),
+            ),
             const SizedBox(height: 14),
 
             // 3. Subject List / Empty State
@@ -253,15 +230,12 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
               )
             else if (displayedSubjects.isEmpty)
               _EmptyNoSubjects(
-                semesterName: _currentTab == _SubjectFilterTab.mySubjects
-                    ? (activeSemester?.name ?? 'current semester')
-                    : 'all semesters',
+                semesterName: activeSemester?.name ?? 'your classes',
                 isFiltered: _searchQuery.isNotEmpty,
                 onClearSearch: () {
                   _searchController.clear();
                   setState(() {
                     _searchQuery = '';
-                    _isSearchVisible = false;
                   });
                 },
                 onAddSubject: () => showNewSubjectSheet(
@@ -309,6 +283,7 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         backgroundColor: const Color(0xFF00C566),
         foregroundColor: Colors.white,
         elevation: 4,
@@ -580,237 +555,7 @@ class _StatPillItem extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. Filter Tabs & Actions Row
-// ─────────────────────────────────────────────────────────────────────────────
 
-class _FilterActionRow extends StatelessWidget {
-  final _SubjectFilterTab currentTab;
-  final ValueChanged<_SubjectFilterTab> onTabChanged;
-  final bool isSearchVisible;
-  final VoidCallback onToggleSearch;
-  final _SubjectSortOption currentSort;
-  final ValueChanged<_SubjectSortOption> onSortChanged;
-
-  const _FilterActionRow({
-    required this.currentTab,
-    required this.onTabChanged,
-    required this.isSearchVisible,
-    required this.onToggleSearch,
-    required this.currentSort,
-    required this.onSortChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Row(
-      children: [
-        // Segmented pill tab bar
-        Flexible(
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1B231F) : const Color(0xFFF1F5F3),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _SegmentedTab(
-                  title: 'My Subjects',
-                  isSelected: currentTab == _SubjectFilterTab.mySubjects,
-                  onTap: () => onTabChanged(_SubjectFilterTab.mySubjects),
-                  isDark: isDark,
-                ),
-                _SegmentedTab(
-                  title: 'All Subjects',
-                  isSelected: currentTab == _SubjectFilterTab.allSubjects,
-                  onTap: () => onTabChanged(_SubjectFilterTab.allSubjects),
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // Search Button
-        _CircularActionButton(
-          icon: Icons.search_rounded,
-          isActive: isSearchVisible,
-          onTap: onToggleSearch,
-          tooltip: 'Search Subjects',
-          isDark: isDark,
-        ),
-        const SizedBox(width: 6),
-
-        // Filter / Sort Menu Button
-        PopupMenuButton<_SubjectSortOption>(
-          tooltip: 'Sort Options',
-          initialValue: currentSort,
-          onSelected: onSortChanged,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: _SubjectSortOption.code,
-              child: Row(
-                children: [
-                  Icon(Icons.sort_by_alpha_rounded, size: 18),
-                  SizedBox(width: 10),
-                  Text('Sort by Code'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: _SubjectSortOption.name,
-              child: Row(
-                children: [
-                  Icon(Icons.title_rounded, size: 18),
-                  SizedBox(width: 10),
-                  Text('Sort by Name'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: _SubjectSortOption.units,
-              child: Row(
-                children: [
-                  Icon(Icons.numbers_rounded, size: 18),
-                  SizedBox(width: 10),
-                  Text('Sort by Units'),
-                ],
-              ),
-            ),
-          ],
-          child: _CircularActionButton(
-            icon: Icons.tune_rounded,
-            isActive: false,
-            onTap: null, // handled by PopupMenuButton
-            tooltip: 'Sort Subjects',
-            isDark: isDark,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SegmentedTab extends StatelessWidget {
-  final String title;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final bool isDark;
-
-  const _SegmentedTab({
-    required this.title,
-    required this.isSelected,
-    required this.onTap,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? const Color(0xFF26332C) : Colors.white)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(17),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: AppTheme.fontFamily,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected
-                    ? (isDark ? Colors.white : const Color(0xFF0D3B2C))
-                    : (isDark ? Colors.white54 : const Color(0xFF6B8074)),
-              ),
-            ),
-            if (isSelected) ...[
-              const SizedBox(height: 2),
-              Container(
-                width: 20,
-                height: 2,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C566),
-                  borderRadius: BorderRadius.circular(1),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CircularActionButton extends StatelessWidget {
-  final IconData icon;
-  final bool isActive;
-  final VoidCallback? onTap;
-  final String tooltip;
-  final bool isDark;
-
-  const _CircularActionButton({
-    required this.icon,
-    required this.isActive,
-    required this.onTap,
-    required this.tooltip,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: isActive
-                ? (isDark ? const Color(0xFF26382E) : const Color(0xFFDEF5E9))
-                : (isDark ? const Color(0xFF1B231F) : const Color(0xFFF1F5F3)),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: isActive
-                ? const Color(0xFF0A7D43)
-                : (isDark ? Colors.white70 : const Color(0xFF233830)),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. Subject Card Component
@@ -873,11 +618,16 @@ class _SubjectCard extends StatelessWidget {
       }
     }
 
-    final locationText = subject.classroom.isNotEmpty
-        ? subject.classroom
-        : (subject.instructor.isNotEmpty
-            ? 'Prof. ${subject.instructor}'
-            : 'No room set');
+    final instructorClean = subject.instructor.trim();
+    final instructorFormatted = instructorClean.isNotEmpty
+        ? (instructorClean.toLowerCase().startsWith('prof')
+            ? instructorClean
+            : 'Prof. $instructorClean')
+        : '';
+
+    final classroomText = subject.classroom.trim().isNotEmpty
+        ? subject.classroom.trim()
+        : 'No room set';
 
     final unitsStr =
         '${subject.units.toStringAsFixed(subject.units.truncateToDouble() == subject.units ? 0 : 1)} Units';
@@ -965,7 +715,9 @@ class _SubjectCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  unitsStr,
+                                  instructorFormatted.isNotEmpty
+                                      ? '$unitsStr • $instructorFormatted'
+                                      : unitsStr,
                                   style: TextStyle(
                                     fontFamily: AppTheme.fontFamily,
                                     fontSize: 11.5,
@@ -974,6 +726,8 @@ class _SubjectCard extends StatelessWidget {
                                         ? Colors.white60
                                         : const Color(0xFF6B8074),
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -1058,7 +812,7 @@ class _SubjectCard extends StatelessWidget {
                         children: [
                           // Schedule info
                           Expanded(
-                            flex: 6,
+                            flex: 5,
                             child: Row(
                               children: [
                                 Icon(
@@ -1110,7 +864,7 @@ class _SubjectCard extends StatelessWidget {
 
                           // Vertical subtle divider
                           Container(
-                            height: 24,
+                            height: 28,
                             width: 1,
                             margin: const EdgeInsets.symmetric(horizontal: 8),
                             color: isDark
@@ -1118,9 +872,9 @@ class _SubjectCard extends StatelessWidget {
                                 : const Color(0xFFF0F4F1),
                           ),
 
-                          // Location info
+                          // Location & Instructor info
                           Expanded(
-                            flex: 4,
+                            flex: 5,
                             child: Row(
                               children: [
                                 Icon(
@@ -1130,30 +884,40 @@ class _SubjectCard extends StatelessWidget {
                                       ? Colors.white60
                                       : const Color(0xFF6B8074),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF26332C)
-                                          : const Color(0xFFF1F5F3),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      locationText,
-                                      style: TextStyle(
-                                        fontFamily: AppTheme.fontFamily,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark
-                                            ? Colors.white70
-                                            : const Color(0xFF233830),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        classroomText,
+                                        style: TextStyle(
+                                          fontFamily: AppTheme.fontFamily,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark
+                                              ? Colors.white
+                                              : const Color(0xFF0D3B2C),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      if (instructorFormatted.isNotEmpty)
+                                        Text(
+                                          instructorFormatted,
+                                          style: TextStyle(
+                                            fontFamily: AppTheme.fontFamily,
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : const Color(0xFF6B8074),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -1280,27 +1044,21 @@ class _SubjectCard extends StatelessWidget {
 
                           const SizedBox(width: 6),
 
-                          // View Resources -> Button
+                          // View Resources -> Button (transparent bg)
                           InkWell(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(8),
                             onTap: onResources,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 9, vertical: 4.5),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? const Color(0xFF1E3A2B)
-                                    : const Color(0xFFDEF5E9),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Row(
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 4),
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     'View Resources',
                                     style: TextStyle(
                                       fontFamily: AppTheme.fontFamily,
-                                      fontSize: 11,
+                                      fontSize: 11.5,
                                       fontWeight: FontWeight.w700,
                                       color: Color(0xFF0A7D43),
                                     ),
@@ -1308,7 +1066,7 @@ class _SubjectCard extends StatelessWidget {
                                   SizedBox(width: 3),
                                   Icon(
                                     Icons.arrow_forward_rounded,
-                                    size: 12,
+                                    size: 13,
                                     color: Color(0xFF0A7D43),
                                   ),
                                 ],
