@@ -73,6 +73,9 @@ flutter:
     - assets/images/Welcome.png
     - assets/images/Semester.png
     - assets/images/SemesterBG.png
+    - assets/images/Calendar.png
+    - assets/images/CalendarBG.png
+    - assets/images/CalendarEmptyMascot.png
 
   fonts:
     - family: InstrumentSans

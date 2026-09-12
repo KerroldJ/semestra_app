@@ -23,7 +23,11 @@ class PlannerPage extends ConsumerStatefulWidget {
 
 class _PlannerPageState extends ConsumerState<PlannerPage> {
   DateTime _selected = DateTime.now();
-  DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _focusedMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    1,
+  );
 
   @override
   void initState() {
@@ -75,14 +79,16 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
         .where((s) => activeSubjectIds.contains(s.subjectId))
         .toList();
     final items = allItems
-        .where((i) => i.subjectId != null &&
-            activeSubjectIds.contains(i.subjectId))
+        .where(
+          (i) => i.subjectId != null && activeSubjectIds.contains(i.subjectId),
+        )
         .toList();
 
     final now = DateTime.now();
     final isViewingCurrentMonth =
         _focusedMonth.year == now.year && _focusedMonth.month == now.month;
-    final isSelectedToday = _selected.year == now.year &&
+    final isSelectedToday =
+        _selected.year == now.year &&
         _selected.month == now.month &&
         _selected.day == now.day;
 
@@ -94,11 +100,7 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
           children: [
-            AppScreenHeader(
-              eyebrow: DateFormat('MMMM yyyy').format(_focusedMonth),
-              title: 'Calendar',
-            ),
-            const SizedBox(height: 16),
+            _PlannerCalendarHero(focusedMonth: _focusedMonth),
             _CalendarCard(
               focusedMonth: _focusedMonth,
               selected: _selected,
@@ -120,53 +122,12 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
                   ? _goToToday
                   : null,
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        DateFormat('EEEE, MMMM d').format(_selected),
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        events.isEmpty
-                            ? 'No events scheduled'
-                            : '${events.length} ${events.length == 1 ? 'event' : 'events'} planned',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white.withValues(alpha: 0.65)
-                                  : AppTheme.inkMuted,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isSelectedToday)
-                  Pill(
-                    text: 'Today',
-                    bg: AppTheme.soft(AppTheme.brandFill(context), 0.14),
-                    fg: AppTheme.accent(context),
-                  ),
-              ],
-            ),
             const SizedBox(height: 16),
-            if (events.isEmpty)
-              const _EmptyDay()
-            else
-              ...events.map(
-                (e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _TimelineRow(event: e),
-                ),
-              ),
+            _SelectedPlannerDayCard(
+              selected: _selected,
+              events: events,
+              isSelectedToday: isSelectedToday,
+            ),
           ],
         ),
       ),
@@ -184,49 +145,56 @@ class _PlannerPageState extends ConsumerState<PlannerPage> {
 
     for (final s in schedules.where((s) => s.dayOfWeek == weekday)) {
       final subject = subjectsById[s.subjectId];
-      final color = subject != null ? Color(subject.colorValue) : AppTheme.primary;
+      final color = subject != null
+          ? Color(subject.colorValue)
+          : AppTheme.primary;
       final t = Fmt.parseHHmm(s.startTime);
       final mins = t == null ? 0 : t.hour * 60 + t.minute;
       final isStudy = s.scheduleType == ScheduleType.study;
-      final instructor =
-          s.instructor.isNotEmpty ? s.instructor : (subject?.instructor ?? '');
-      final timeRange =
-          '${Fmt.time12(s.startTime)} – ${Fmt.time12(s.endTime)}';
+      final instructor = s.instructor.isNotEmpty
+          ? s.instructor
+          : (subject?.instructor ?? '');
+      final timeRange = '${Fmt.time12(s.startTime)} – ${Fmt.time12(s.endTime)}';
       final subParts = <String>[];
       if (instructor.isNotEmpty) subParts.add(instructor);
       if (s.classroom.isNotEmpty) subParts.add(s.classroom);
       subParts.add(timeRange);
 
-      events.add(_PlannerEvent(
-        minutes: mins,
-        timeLabel: Fmt.time12(s.startTime),
-        category: s.scheduleType.label,
-        color: isStudy ? AppTheme.statGreen : color,
-        title: subject?.name ?? 'Class',
-        subtitle: isStudy
-            ? '${subject?.name ?? ''} · ${Fmt.durationMinutes(s.startTime, s.endTime)}m planned'
-            : subParts.join(' · '),
-        tint: isStudy ? AppTheme.statGreen : null,
-      ));
+      events.add(
+        _PlannerEvent(
+          minutes: mins,
+          timeLabel: Fmt.time12(s.startTime),
+          category: s.scheduleType.label,
+          color: isStudy ? AppTheme.statGreen : color,
+          title: subject?.name ?? 'Class',
+          subtitle: isStudy
+              ? '${subject?.name ?? ''} · ${Fmt.durationMinutes(s.startTime, s.endTime)}m planned'
+              : subParts.join(' · '),
+          tint: isStudy ? AppTheme.statGreen : null,
+        ),
+      );
     }
 
-    for (final i in items.where((i) =>
-        i.type != ItemType.note && i.dueDate != null && !i.isCompleted)) {
+    for (final i in items.where(
+      (i) => i.type != ItemType.note && i.dueDate != null && !i.isCompleted,
+    )) {
       final d = i.dueDate!;
       if (d.year != day.year || d.month != day.month || d.day != day.day) {
         continue;
       }
       final hasTime = d.hour != 0 || d.minute != 0;
       final subject = subjectsById[i.subjectId];
-      events.add(_PlannerEvent(
-        minutes: hasTime ? d.hour * 60 + d.minute : 17 * 60,
-        timeLabel: hasTime ? Fmt.time12('${d.hour}:${d.minute}') : '',
-        category: 'DEADLINE',
-        color: AppTheme.statRed,
-        title: i.title,
-        subtitle: subject?.name ?? '',
-        tint: AppTheme.statRed,
-      ));
+      events.add(
+        _PlannerEvent(
+          minutes: hasTime ? d.hour * 60 + d.minute : 17 * 60,
+          timeLabel: hasTime ? Fmt.time12('${d.hour}:${d.minute}') : '',
+          category: 'DEADLINE',
+          color: AppTheme.statRed,
+          title: i.title,
+          subtitle: subject?.name ?? '',
+          tint: AppTheme.statRed,
+        ),
+      );
     }
 
     events.sort((a, b) => a.minutes.compareTo(b.minutes));
@@ -252,6 +220,84 @@ class _PlannerEvent {
     required this.subtitle,
     this.tint,
   });
+}
+
+class _PlannerCalendarHero extends StatelessWidget {
+  final DateTime focusedMonth;
+
+  const _PlannerCalendarHero({required this.focusedMonth});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 170,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandFill(context).withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/CalendarBG.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          ),
+          Positioned(
+            right: -24,
+            bottom: -22,
+            width: 218,
+            child: Image.asset(
+              'assets/images/Calendar.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+          Positioned(
+            left: 24,
+            top: 24,
+            width: 190,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Stay on track',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: const Color(0xFF1B8755),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Calendar',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: const Color(0xFF0D3B2C),
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Plan today. A better tomorrow.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF3B6756),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CalendarCard extends StatelessWidget {
@@ -321,114 +367,130 @@ class _CalendarCard extends StatelessWidget {
       gridDays.add(_buildDayData(date, isCurrentMonth: false, now: now));
     }
 
-    return GestureDetector(
-      onHorizontalDragEnd: (details) {
-        if (details.primaryVelocity != null) {
-          if (details.primaryVelocity! < -200) {
-            onNextMonth();
-          } else if (details.primaryVelocity! > 200) {
-            onPreviousMonth();
+    return Transform.translate(
+      offset: const Offset(0, -18),
+      child: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          if (details.primaryVelocity != null) {
+            if (details.primaryVelocity! < -200) {
+              onNextMonth();
+            } else if (details.primaryVelocity! > 200) {
+              onPreviousMonth();
+            }
           }
-        }
-      },
-      child: SoftCard(
-        padding: const EdgeInsets.all(18),
-        radius: 24,
-        child: Column(
-          children: [
-            // Calendar Month Navigation Header
-            Row(
-              children: [
-                Text(
-                  DateFormat('MMMM yyyy').format(focusedMonth),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17,
-                      ),
-                ),
-                const Spacer(),
-                if (onTodayTap != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: onTodayTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.soft(AppTheme.brandFill(context), 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Today',
-                          style: TextStyle(
-                            color: AppTheme.accent(context),
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
+        },
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          decoration: BoxDecoration(
+            color: isDark ? Theme.of(context).cardColor : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.06),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    DateFormat('MMMM yyyy').format(focusedMonth),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (onTodayTap != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: onTodayTap,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.soft(
+                              AppTheme.brandFill(context),
+                              0.12,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            'Today',
+                            style: TextStyle(
+                              color: AppTheme.accent(context),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ),
                     ),
+                  _MonthNavButton(
+                    icon: Icons.chevron_left_rounded,
+                    onTap: onPreviousMonth,
                   ),
-                _MonthNavButton(
-                  icon: Icons.chevron_left_rounded,
-                  onTap: onPreviousMonth,
-                ),
-                const SizedBox(width: 4),
-                _MonthNavButton(
-                  icon: Icons.chevron_right_rounded,
-                  onTap: onNextMonth,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Weekday Header
-            Row(
-              children: weekdayLabels.map((lbl) {
-                return Expanded(
-                  child: Center(
-                    child: Text(
-                      lbl.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.6,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.60)
-                            : AppTheme.inkMuted,
+                  const SizedBox(width: 6),
+                  _MonthNavButton(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: onNextMonth,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: weekdayLabels.map((lbl) {
+                  return Expanded(
+                    child: Center(
+                      child: Text(
+                        lbl,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.60)
+                              : AppTheme.inkMuted,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-            // Days Grid
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: gridDays.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 6,
-                childAspectRatio: 1.3,
+                  );
+                }).toList(),
               ),
-              itemBuilder: (context, index) {
-                final dayData = gridDays[index];
-                final isSel = dayData.date.year == selected.year &&
-                    dayData.date.month == selected.month &&
-                    dayData.date.day == selected.day;
+              const SizedBox(height: 10),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: gridDays.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisSpacing: 7,
+                  crossAxisSpacing: 4,
+                  childAspectRatio: 0.9,
+                ),
+                itemBuilder: (context, index) {
+                  final dayData = gridDays[index];
+                  final isSel =
+                      dayData.date.year == selected.year &&
+                      dayData.date.month == selected.month &&
+                      dayData.date.day == selected.day;
 
-                return _CalendarDayCell(
-                  data: dayData,
-                  isSelected: isSel,
-                  onTap: () => onSelectDate(dayData.date),
-                );
-              },
-            ),
-          ],
+                  return _CalendarDayCell(
+                    data: dayData,
+                    isSelected: isSel,
+                    onTap: () => onSelectDate(dayData.date),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -439,18 +501,19 @@ class _CalendarCard extends StatelessWidget {
     required bool isCurrentMonth,
     required DateTime now,
   }) {
-    final isToday = date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
+    final isToday =
+        date.year == now.year && date.month == now.month && date.day == now.day;
 
     final hasClass = schedules.any((s) => s.dayOfWeek == date.weekday);
-    final hasDeadline = items.any((i) =>
-        i.type != ItemType.note &&
-        i.dueDate != null &&
-        !i.isCompleted &&
-        i.dueDate!.year == date.year &&
-        i.dueDate!.month == date.month &&
-        i.dueDate!.day == date.day);
+    final hasDeadline = items.any(
+      (i) =>
+          i.type != ItemType.note &&
+          i.dueDate != null &&
+          !i.isCompleted &&
+          i.dueDate!.year == date.year &&
+          i.dueDate!.month == date.month &&
+          i.dueDate!.day == date.day,
+    );
 
     return _CalendarDayData(
       date: date,
@@ -532,30 +595,30 @@ class _CalendarDayCell extends StatelessWidget {
         onTap: onTap,
         child: Center(
           child: Container(
-            width: 44,
-            height: 44,
+            width: 42,
+            height: 48,
             decoration: decoration,
             alignment: Alignment.center,
             child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${data.date.day}',
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: isSelected || data.isToday
-                      ? FontWeight.w800
-                      : FontWeight.w600,
-                  color: textColor,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${data.date.day}',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: isSelected || data.isToday
+                        ? FontWeight.w800
+                        : FontWeight.w600,
+                    color: textColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 3),
-              _EventIndicatorDots(
-                hasClass: data.hasClass,
-                hasDeadline: data.hasDeadline,
-                isSelected: isSelected,
-              ),
-            ],
+                const SizedBox(height: 3),
+                _EventIndicatorDots(
+                  hasClass: data.hasClass,
+                  hasDeadline: data.hasDeadline,
+                  isSelected: isSelected,
+                ),
+              ],
             ),
           ),
         ),
@@ -652,9 +715,7 @@ class _TimelineRow extends StatelessWidget {
             ? AppTheme.soft(event.tint!, 0.08)
             : (isDark ? Theme.of(context).cardColor : Colors.white),
         borderRadius: BorderRadius.circular(16),
-        border: Border(
-          left: BorderSide(color: event.color, width: 4),
-        ),
+        border: Border(left: BorderSide(color: event.color, width: 4)),
         boxShadow: event.tint != null || isDark
             ? null
             : [
@@ -678,12 +739,10 @@ class _TimelineRow extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(event.title,
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(event.title, style: Theme.of(context).textTheme.titleMedium),
           if (event.subtitle.isNotEmpty) ...[
             const SizedBox(height: 2),
-            Text(event.subtitle,
-                style: Theme.of(context).textTheme.bodyMedium),
+            Text(event.subtitle, style: Theme.of(context).textTheme.bodyMedium),
           ],
         ],
       ),
@@ -695,21 +754,137 @@ class _EmptyDay extends StatelessWidget {
   const _EmptyDay();
   @override
   Widget build(BuildContext context) {
-    return SoftCard(
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.event_available_rounded,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white38
-                  : AppTheme.inkFaint,
-              size: 28),
-          const SizedBox(height: 10),
-          Text('Nothing planned for this day',
-              style: Theme.of(context).textTheme.bodyMedium),
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 104,
+                  child: Image.asset(
+                    'assets/images/CalendarEmptyMascot.png',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Nothing planned for this day',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Take a rest, plan ahead, or add something new.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.inkMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+class _SelectedPlannerDayCard extends StatelessWidget {
+  final DateTime selected;
+  final List<_PlannerEvent> events;
+  final bool isSelectedToday;
+
+  const _SelectedPlannerDayCard({
+    required this.selected,
+    required this.events,
+    required this.isSelectedToday,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  DateFormat('EEEE, MMMM d').format(selected),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (isSelectedToday)
+                Pill(
+                  text: 'Today',
+                  bg: AppTheme.soft(AppTheme.brandFill(context), 0.14),
+                  fg: AppTheme.accent(context),
+                ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            events.isEmpty
+                ? 'No events scheduled'
+                : '${events.length} ${events.length == 1 ? 'event' : 'events'} planned',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : AppTheme.inkMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (events.isEmpty)
+            const _EmptyDay()
+          else
+            ...events.map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _TimelineRow(event: e),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
