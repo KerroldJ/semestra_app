@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_toast.dart';
@@ -301,7 +302,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -322,6 +323,73 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               : const Color(0xFF8B9E94),
                         ),
                   ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: () => _openUrl(
+                            'https://kerroldjportfolio.com/projects/semestra/privacy-policy'),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
+                          child: Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? const Color(0xFF5EE59A)
+                                  : const Color(0xFF0A7D43),
+                              decoration: TextDecoration.underline,
+                              decorationColor: isDark
+                                  ? const Color(0xFF5EE59A).withValues(alpha: 0.5)
+                                  : const Color(0xFF0A7D43).withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '·',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? Colors.white38
+                                : const Color(0xFF8B9E94),
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _openUrl(
+                            'https://kerroldjportfolio.com/projects/semestra/terms-conditions'),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
+                          child: Text(
+                            'Terms & Conditions',
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? const Color(0xFF5EE59A)
+                                  : const Color(0xFF0A7D43),
+                              decoration: TextDecoration.underline,
+                              decorationColor: isDark
+                                  ? const Color(0xFF5EE59A).withValues(alpha: 0.5)
+                                  : const Color(0xFF0A7D43).withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -332,6 +400,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   // ---- Actions ----
+
+  Future<void> _openUrl(String urlString) async {
+    try {
+      final uri = Uri.parse(urlString);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {
+      AppToast.error('Could not open link in browser');
+    }
+  }
 
   Future<void> _customizeBackupPath(String currentPath) async {
     final controller = TextEditingController(text: currentPath);
