@@ -270,18 +270,20 @@ class _CalendarHero extends StatelessWidget {
             alignment: Alignment.center,
           ),
           Positioned(
-            right: -42,
-            bottom: -34,
-            width: 260,
+            right: 2,
+            bottom: -16,
+            top: 16,
+            width: 205,
             child: Image.asset(
               'assets/images/Calendar.png',
               fit: BoxFit.contain,
+              alignment: Alignment.bottomRight,
             ),
           ),
           Positioned(
-            left: 24,
-            top: 22,
-            width: 180,
+            left: 22,
+            top: 16,
+            right: 200,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -293,16 +295,16 @@ class _CalendarHero extends StatelessWidget {
                     letterSpacing: 0.8,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   'Calendar',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: const Color(0xFF0D3B2C),
                     fontWeight: FontWeight.w900,
-                    height: 1,
+                    height: 1.05,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   'Plan today. A better tomorrow.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(

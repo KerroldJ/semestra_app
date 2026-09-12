@@ -105,11 +105,6 @@ class TodayPage extends ConsumerWidget {
     final username = profile?.username.isNotEmpty == true
         ? profile!.username
         : 'there';
-    final greeting = now.hour < 12
-        ? 'Good morning'
-        : now.hour < 18
-            ? 'Good afternoon'
-            : 'Good evening';
 
     final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
     final textMuted = isDark ? Colors.white60 : const Color(0xFF6B7280);
@@ -511,7 +506,6 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
 
     final textHeading = isDark ? Colors.white : const Color(0xFF0D3B2C);
     final textDate = isDark ? const Color(0xFF8FD8B3) : const Color(0xFF3B6756);
-    final textSubtitle = isDark ? Colors.white70 : const Color(0xFF4A6B5E);
     final bubbleBg = isDark ? const Color(0xFF152A20) : Colors.white;
     final bubbleTextTitle = isDark ? Colors.white : const Color(0xFF103A2B);
     final bubbleTextBody = isDark ? Colors.white70 : const Color(0xFF4A6B5E);
@@ -581,15 +575,13 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                   ),
                 ),
 
-                // 3. Left Text Section (Good morning, Date, Underline, Goals)
+                // 3. Left Text Section (Good morning/afternoon, Date, Clock)
                 Positioned(
                   left: 18,
-                  top: 12,
-                  bottom: 12,
+                  top: 14,
                   width: textWidth,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         '$greetingWord1\n$greetingWord2',
@@ -602,7 +594,7 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                           letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 6),
                       Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: 8,
@@ -635,28 +627,6 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                             ],
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 34,
-                        height: 2.5,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1B8755),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Keep up the great work!\nYour goals are within reach.',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTheme.fontFamily,
-                          fontSize: isCompact ? 10 : 11,
-                          fontWeight: FontWeight.w500,
-                          color: textSubtitle,
-                          height: 1.25,
-                        ),
                       ),
                     ],
                   ),

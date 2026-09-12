@@ -64,7 +64,7 @@ class SemesterPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
               children: [
                 _Header(now: now),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 if (hero != null) ...[
                   _ActiveHero(
                     semester: hero,
@@ -74,7 +74,7 @@ class SemesterPage extends ConsumerWidget {
                     onManage: () =>
                         showSemesterSheet(context, existing: hero),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                 ],
                 ...visible.map((sem) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
@@ -141,7 +141,6 @@ class _Header extends StatelessWidget {
     final titleColor = isDark ? Colors.white : const Color(0xFF0D3B2C);
     final dateColor =
         isDark ? const Color(0xFF8FD8B3) : const Color(0xFF3B6756);
-    final subColor = isDark ? Colors.white70 : const Color(0xFF4A6B5E);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -170,7 +169,7 @@ class _Header extends StatelessWidget {
                   child: Image.asset(
                     'assets/images/SemesterBG.png',
                     fit: BoxFit.cover,
-                    alignment: Alignment.centerRight,
+                    alignment: Alignment.center,
                     errorBuilder: (_, __, ___) => DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -197,28 +196,6 @@ class _Header extends StatelessWidget {
                       color: Colors.black.withValues(alpha: 0.35),
                     ),
                   ),
-                // Legibility veil on the left, fading out toward the mascot so
-                // the heading and subtitle stay readable over the artwork.
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: isDark
-                            ? [
-                                Colors.black.withValues(alpha: 0.58),
-                                Colors.black.withValues(alpha: 0.0),
-                              ]
-                            : [
-                                const Color(0xFFE9F6EE).withValues(alpha: 0.97),
-                                const Color(0xFFE9F6EE).withValues(alpha: 0.0),
-                              ],
-                        stops: const [0.0, 0.66],
-                      ),
-                    ),
-                  ),
-                ),
                 // Mascot illustration, bottom-right.
                 Positioned(
                   right: -8,
@@ -232,15 +209,13 @@ class _Header extends StatelessWidget {
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
                 ),
-                // Left text block.
+                // Left text block (in the sky).
                 Positioned(
-                  left: 20,
+                  left: 22,
                   top: 18,
-                  bottom: 18,
                   right: mascotWidth * 0.72,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         DateFormat('EEEE, MMMM d').format(now),
@@ -263,19 +238,6 @@ class _Header extends StatelessWidget {
                           letterSpacing: -0.6,
                           height: 1.0,
                           color: titleColor,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Plan your term and track your progress.',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTheme.fontFamily,
-                          fontSize: isCompact ? 11 : 12,
-                          fontWeight: FontWeight.w500,
-                          height: 1.25,
-                          color: subColor,
                         ),
                       ),
                     ],
