@@ -45,6 +45,8 @@ dependencies:
   path_provider: ^2.1.5
   lottie: ^3.1.2
   sqlite3_flutter_libs: ^0.5.42
+  file_picker: ^11.0.3
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:

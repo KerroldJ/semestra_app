@@ -1,0 +1,671 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/app_toast.dart';
+import '../../../subject/domain/entities/subject_entity.dart';
+import '../../domain/entities/resource_entity.dart';
+import '../providers/resource_provider.dart';
+import '../widgets/upload_resource_sheet.dart';
+
+class SubjectResourcesPage extends ConsumerStatefulWidget {
+  final SubjectEntity subject;
+
+  const SubjectResourcesPage({super.key, required this.subject});
+
+  @override
+  ConsumerState<SubjectResourcesPage> createState() =>
+      _SubjectResourcesPageState();
+}
+
+class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
+  String _filterType = 'All';
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openFile(ResourceEntity resource) async {
+    final file = File(resource.filePath);
+    if (!await file.exists()) {
+      AppToast.error('File no longer exists at ${resource.filePath}');
+      return;
+    }
+    try {
+      final result = await OpenFilex.open(resource.filePath);
+      if (result.type != ResultType.done && result.type != ResultType.noAppToOpen) {
+        if (result.message.isNotEmpty) {
+          AppToast.info(result.message);
+        }
+      }
+    } catch (e) {
+      AppToast.error('Could not open file: $e');
+    }
+  }
+
+  void _confirmDelete(BuildContext context, ResourceEntity resource) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Resource'),
+        content: Text('Are you sure you want to delete "${resource.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(resourceNotifierProvider.notifier).deleteResource(
+                    resource.id,
+                    filePath: resource.filePath,
+                  );
+            },
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final allResources = ref.watch(resourceNotifierProvider).value ?? [];
+    final subjectResources = allResources
+        .where((r) => r.subjectId == widget.subject.id && !r.isDeleted)
+        .toList();
+
+    List<ResourceEntity> filtered = subjectResources;
+
+    // Apply category filter
+    if (_filterType == 'PDF') {
+      filtered = filtered.where((r) => r.extension == 'pdf').toList();
+    } else if (_filterType == 'PPT') {
+      filtered = filtered.where((r) => r.extension.startsWith('ppt')).toList();
+    } else if (_filterType == 'Sheets') {
+      filtered = filtered
+          .where((r) =>
+              r.extension == 'xls' ||
+              r.extension == 'xlsx' ||
+              r.extension == 'csv')
+          .toList();
+    } else if (_filterType == 'Docs') {
+      filtered = filtered
+          .where((r) =>
+              r.extension.startsWith('doc') ||
+              r.extension == 'txt' ||
+              r.extension == 'rtf' ||
+              r.extension == 'odt')
+          .toList();
+    }
+
+    // Apply search filter
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.trim().toLowerCase();
+      filtered = filtered.where((r) {
+        return r.title.toLowerCase().contains(q) ||
+            r.fileName.toLowerCase().contains(q) ||
+            r.notes.toLowerCase().contains(q);
+      }).toList();
+    }
+
+    final spine = AppTheme.spineFor(widget.subject.colorValue);
+    final brandFill = AppTheme.brandFill(context);
+
+    final pdfCount = subjectResources.where((r) => r.extension == 'pdf').length;
+    final pptCount =
+        subjectResources.where((r) => r.extension.startsWith('ppt')).length;
+    final sheetCount = subjectResources
+        .where((r) =>
+            r.extension == 'xls' ||
+            r.extension == 'xlsx' ||
+            r.extension == 'csv')
+        .length;
+    final docCount = subjectResources
+        .where((r) =>
+            r.extension.startsWith('doc') ||
+            r.extension == 'txt' ||
+            r.extension == 'rtf' ||
+            r.extension == 'odt')
+        .length;
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: isDark ? theme.cardColor : Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: spine,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${widget.subject.code.isNotEmpty ? "${widget.subject.code} • " : ""}Resources',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    widget.subject.name,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white60 : AppTheme.inkMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: brandFill,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: const CircleBorder(),
+        tooltip: 'Upload Resource',
+        onPressed: () {
+          showUploadResourceSheet(
+            context,
+            defaultSubjectId: widget.subject.id,
+          );
+        },
+        child: const Icon(Icons.upload_file_rounded, size: 26),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 100),
+        children: [
+          // 1. Subject Header / Stats Banner
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF16231D) : const Color(0xFFEBF7F0),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: brandFill.withValues(alpha: isDark ? 0.2 : 0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: brandFill.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.folder_open_rounded,
+                        color: AppTheme.accent(context),
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${subjectResources.length} ${subjectResources.length == 1 ? "Resource" : "Resources"}',
+                            style: TextStyle(
+                              fontFamily: AppTheme.fontFamily,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              color: isDark ? Colors.white : const Color(0xFF0D3B2C),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Upload lecture presentations, PDFs, datasets, and docs.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? const Color(0xFF90C2A9) : const Color(0xFF436B5C),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Stat Pills
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _StatBadge(
+                      label: 'PDFs',
+                      count: pdfCount,
+                      color: const Color(0xFFE53935),
+                    ),
+                    _StatBadge(
+                      label: 'Slides',
+                      count: pptCount,
+                      color: const Color(0xFFE65100),
+                    ),
+                    _StatBadge(
+                      label: 'Sheets',
+                      count: sheetCount,
+                      color: const Color(0xFF2E7D32),
+                    ),
+                    _StatBadge(
+                      label: 'Docs',
+                      count: docCount,
+                      color: const Color(0xFF1565C0),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // 2. Search & Category Filters
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? theme.cardColor : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.hairlineBorder(context)),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _searchQuery = v),
+              decoration: InputDecoration(
+                hintText: 'Search files by title or keyword...',
+                hintStyle: TextStyle(
+                  fontSize: 13.5,
+                  color: isDark ? Colors.white38 : AppTheme.inkMuted,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: isDark ? Colors.white54 : AppTheme.inkMuted,
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Category Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: ['All', 'PDF', 'PPT', 'Sheets', 'Docs'].map((category) {
+                final isSelected = _filterType == category;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(category),
+                    selected: isSelected,
+                    onSelected: (_) => setState(() => _filterType = category),
+                    selectedColor: AppTheme.soft(brandFill, 0.18),
+                    backgroundColor:
+                        isDark ? const Color(0xFF1B2520) : Colors.white,
+                    labelStyle: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? AppTheme.accent(context)
+                          : (isDark ? Colors.white70 : AppTheme.ink),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? brandFill
+                            : AppTheme.hairlineBorder(context),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Resources List
+          if (filtered.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.soft(brandFill, 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 44,
+                        color: AppTheme.accent(context),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      subjectResources.isEmpty
+                          ? 'No files uploaded yet'
+                          : 'No files match your filter',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Upload your lecture notes, slides, problem sets, or readings.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white60 : AppTheme.inkMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        showUploadResourceSheet(
+                          context,
+                          defaultSubjectId: widget.subject.id,
+                        );
+                      },
+                      icon: const Icon(Icons.upload_file_rounded, size: 18),
+                      label: const Text('Upload Resource'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: brandFill,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...filtered.map((resource) {
+              final color = resource.categoryColor;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? theme.cardColor : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppTheme.hairlineBorder(context),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black
+                            .withValues(alpha: isDark ? 0.22 : 0.035),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: InkWell(
+                      onTap: () => _openFile(resource),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // File Icon Badge
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                resource.icon,
+                                color: color,
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+
+                            // Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    resource.title,
+                                    style: TextStyle(
+                                      fontFamily: AppTheme.fontFamily,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: isDark ? Colors.white : AppTheme.ink,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    resource.fileName,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.white60
+                                          : AppTheme.inkMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          resource.extension.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: color,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        resource.formattedSize,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: isDark
+                                              ? Colors.white60
+                                              : AppTheme.inkMuted,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '• ${DateFormat('MMM d, yyyy').format(resource.createdAt)}',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: isDark
+                                              ? Colors.white38
+                                              : AppTheme.inkFaint,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (resource.notes.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.white.withValues(alpha: 0.05)
+                                            : const Color(0xFFF7FAF8),
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        resource.notes,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                          color: isDark
+                                              ? Colors.white70
+                                              : AppTheme.inkMuted,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                            // Action Menu
+                            PopupMenuButton<String>(
+                              icon: Icon(
+                                Icons.more_vert_rounded,
+                                color: isDark
+                                    ? Colors.white54
+                                    : const Color(0xFF8B9E94),
+                                size: 20,
+                              ),
+                              onSelected: (val) {
+                                if (val == 'open') {
+                                  _openFile(resource);
+                                } else if (val == 'delete') {
+                                  _confirmDelete(context, resource);
+                                }
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(
+                                  value: 'open',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.open_in_new_rounded, size: 18),
+                                      SizedBox(width: 10),
+                                      Text('Open File'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline_rounded,
+                                          color: AppTheme.danger, size: 18),
+                                      SizedBox(width: 10),
+                                      Text('Delete',
+                                          style:
+                                              TextStyle(color: AppTheme.danger)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatBadge extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+
+  const _StatBadge({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count $label',
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}

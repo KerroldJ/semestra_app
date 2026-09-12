@@ -23,6 +23,8 @@ import '../../features/semester/presentation/pages/semester_page.dart';
 import '../../features/semester/presentation/pages/semester_overview_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/themes_page.dart';
+import '../../features/subject/domain/entities/subject_entity.dart';
+import '../../features/resource/presentation/pages/subject_resources_page.dart';
 
 final _rootNavigatorKey = appNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -147,6 +149,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/semester/overview',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, __) => const SemesterOverviewPage(),
+      ),
+      GoRoute(
+        path: '/subject/resources',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) =>
+            SubjectResourcesPage(subject: state.extra as SubjectEntity),
       ),
       GoRoute(
         path: '/settings/themes',

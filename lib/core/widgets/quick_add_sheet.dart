@@ -14,6 +14,8 @@ import '../../features/schedule/presentation/providers/schedule_provider.dart';
 
 import '../../features/semester/presentation/providers/semester_provider.dart';
 import '../../features/semester/presentation/pages/semester_page.dart' show showSemesterSheet;
+export '../../features/resource/presentation/widgets/upload_resource_sheet.dart'
+    show showUploadResourceSheet;
 import '../../app/navigation/navigation_shell.dart' show fabHiddenNotifier;
 
 // ---------------------------------------------------------------------------

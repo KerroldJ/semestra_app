@@ -28,6 +28,11 @@ import '../../features/settings/data/datasources/settings_local_data_source.dart
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
 
+// Resources
+import '../../features/resource/data/datasources/resource_local_data_source.dart';
+import '../../features/resource/data/repositories/resource_repository_impl.dart';
+import '../../features/resource/domain/repositories/resource_repository.dart';
+
 // Core DB provider
 final databaseHelperProvider = Provider<DatabaseHelper>((ref) => DatabaseHelper.instance);
 
@@ -63,6 +68,14 @@ final itemRepositoryProvider = Provider<ItemRepository>((ref) {
   return ItemRepositoryImpl(ref.watch(itemLocalDataSourceProvider));
 });
 
+// Resource Providers
+final resourceLocalDataSourceProvider = Provider<ResourceLocalDataSource>((ref) {
+  return ResourceLocalDataSourceImpl(ref.watch(databaseHelperProvider));
+});
+final resourceRepositoryProvider = Provider<ResourceRepository>((ref) {
+  return ResourceRepositoryImpl(ref.watch(resourceLocalDataSourceProvider));
+});
+
 // Settings Providers
 final settingsLocalDataSourceProvider = Provider<SettingsLocalDataSource>((ref) {
   return SettingsLocalDataSourceImpl(ref.watch(databaseHelperProvider));
@@ -70,3 +83,4 @@ final settingsLocalDataSourceProvider = Provider<SettingsLocalDataSource>((ref) 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryImpl(ref.watch(settingsLocalDataSourceProvider));
 });
+

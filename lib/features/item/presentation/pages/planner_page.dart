@@ -600,25 +600,33 @@ class _CalendarDayCell extends StatelessWidget {
             width: 42,
             height: 48,
             decoration: decoration,
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Text(
-                  '${data.date.day}',
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: isSelected || data.isToday
-                        ? FontWeight.w800
-                        : FontWeight.w600,
-                    color: textColor,
+                Center(
+                  child: Text(
+                    '${data.date.day}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: isSelected || data.isToday
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: textColor,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                _EventIndicatorDots(
-                  hasClass: data.hasClass,
-                  hasDeadline: data.hasDeadline,
-                  isSelected: isSelected,
+                Positioned(
+                  bottom: 5,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _EventIndicatorDots(
+                      hasClass: data.hasClass,
+                      hasDeadline: data.hasDeadline,
+                      isSelected: isSelected,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -643,7 +651,7 @@ class _EventIndicatorDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!hasClass && !hasDeadline) {
-      return const SizedBox(height: 4);
+      return const SizedBox.shrink();
     }
 
     return SizedBox(

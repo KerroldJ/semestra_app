@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/format.dart';
@@ -15,6 +16,8 @@ import '../../../semester/presentation/pages/semester_page.dart'
 import '../../../semester/presentation/providers/semester_provider.dart';
 import '../../domain/entities/subject_entity.dart';
 import '../providers/subject_provider.dart';
+import '../../../resource/domain/entities/resource_entity.dart';
+import '../../../resource/presentation/providers/resource_provider.dart';
 
 enum _SubjectFilterTab { mySubjects, allSubjects }
 
@@ -86,6 +89,7 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
     final semesters = ref.watch(semesterNotifierProvider).value ?? [];
     final items = ref.watch(itemNotifierProvider).value ?? [];
     final schedules = ref.watch(scheduleNotifierProvider).value ?? [];
+    final resources = ref.watch(resourceNotifierProvider).value ?? [];
 
     SemesterEntity? activeSemester;
     if (semesters.isNotEmpty) {
@@ -271,6 +275,8 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
                     items.where((i) => i.subjectId == s.id).toList();
                 final subjectSchedules =
                     schedules.where((sch) => sch.subjectId == s.id).toList();
+                final subjectResources =
+                    resources.where((r) => r.subjectId == s.id && !r.isDeleted).toList();
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -278,6 +284,7 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
                     subject: s,
                     items: subjectItems,
                     schedules: subjectSchedules,
+                    resources: subjectResources,
                     onView: () => showEditSubjectSheet(
                       context,
                       subject: s,
@@ -287,6 +294,10 @@ class _SubjectsTabPageState extends ConsumerState<SubjectsTabPage> {
                       context,
                       subject: s,
                       schedules: subjectSchedules,
+                    ),
+                    onResources: () => context.push(
+                      '/subject/resources',
+                      extra: s,
                     ),
                     onDelete: () =>
                         _confirmDeleteSubject(context, s, subjectSchedules),
@@ -809,16 +820,20 @@ class _SubjectCard extends StatelessWidget {
   final SubjectEntity subject;
   final List<ItemEntity> items;
   final List<ScheduleEntity> schedules;
+  final List<ResourceEntity> resources;
   final VoidCallback onView;
   final VoidCallback onEdit;
+  final VoidCallback onResources;
   final VoidCallback onDelete;
 
   const _SubjectCard({
     required this.subject,
     required this.items,
     required this.schedules,
+    required this.resources,
     required this.onView,
     required this.onEdit,
+    required this.onResources,
     required this.onDelete,
   });
 
@@ -831,6 +846,7 @@ class _SubjectCard extends StatelessWidget {
     final notesCount = items.where((i) => i.type == ItemType.note).length;
     final tasksCount =
         items.where((i) => i.type != ItemType.note && !i.isCompleted).length;
+    final resourcesCount = resources.length;
 
     // Formatting schedules
     const dayNames = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -972,6 +988,8 @@ class _SubjectCard extends StatelessWidget {
                             onSelected: (val) {
                               if (val == 'edit') {
                                 onEdit();
+                              } else if (val == 'resources') {
+                                onResources();
                               } else if (val == 'delete') {
                                 onDelete();
                               }
@@ -984,6 +1002,16 @@ class _SubjectCard extends StatelessWidget {
                                     Icon(Icons.edit_outlined, size: 18),
                                     SizedBox(width: 10),
                                     Text('Edit Subject'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'resources',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.folder_open_rounded, size: 18),
+                                    const SizedBox(width: 10),
+                                    Text('Resources ($resourcesCount)'),
                                   ],
                                 ),
                               ),
@@ -1206,16 +1234,56 @@ class _SubjectCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                Container(
+                                  height: 12,
+                                  width: 1,
+                                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                                  color: isDark
+                                      ? Colors.white10
+                                      : const Color(0xFFE2E7E4),
+                                ),
+
+                                // Resources count
+                                InkWell(
+                                  onTap: onResources,
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.folder_open_rounded,
+                                        size: 14,
+                                        color: isDark
+                                            ? Colors.white60
+                                            : const Color(0xFF6B8074),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '$resourcesCount files',
+                                        style: TextStyle(
+                                          fontFamily: AppTheme.fontFamily,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.white70
+                                              : const Color(0xFF5A756C),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
 
                           const SizedBox(width: 6),
 
-                          // View Subject -> Button
+                          // View Resources -> Button
                           InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: onView,
+                            onTap: onResources,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 9, vertical: 4.5),
@@ -1229,7 +1297,7 @@ class _SubjectCard extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'View Subject',
+                                    'View Resources',
                                     style: TextStyle(
                                       fontFamily: AppTheme.fontFamily,
                                       fontSize: 11,

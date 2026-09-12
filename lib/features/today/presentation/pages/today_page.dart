@@ -263,8 +263,6 @@ class TodayPage extends ConsumerWidget {
                     }
                     showNewWorkItemSheet(context, ItemType.task);
                   }),
-                  _CardAction('Resource Library', Icons.folder_open_rounded,
-                      () => context.go('/notes')),
                 ],
               )
             else ...[

@@ -71,8 +71,6 @@ class SemesterPage extends ConsumerWidget {
                     subjectCount: subjCount(hero),
                     totalUnits: unitsOf(hero),
                     now: now,
-                    onManage: () =>
-                        showSemesterSheet(context, existing: hero),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -261,14 +259,12 @@ class _ActiveHero extends StatelessWidget {
   final int subjectCount;
   final double totalUnits;
   final DateTime now;
-  final VoidCallback onManage;
 
   const _ActiveHero({
     required this.semester,
     required this.subjectCount,
     required this.totalUnits,
     required this.now,
-    required this.onManage,
   });
 
   @override
@@ -454,35 +450,6 @@ class _ActiveHero extends StatelessWidget {
                       _HeroStat(
                         value: unitsStr,
                         label: totalUnits == 1 ? 'Unit' : 'Units',
-                      ),
-                      const Spacer(),
-                      Material(
-                        color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
-                        borderRadius: BorderRadius.circular(14),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: onManage,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 11),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.tune_rounded,
-                                    size: 17, color: accent),
-                                const SizedBox(width: 7),
-                                Text(
-                                  'Manage',
-                                  style: TextStyle(
-                                    color: accent,
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),

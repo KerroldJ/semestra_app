@@ -23,7 +23,7 @@ class DatabaseHelper {
 
       final db = await openDatabase(
         path,
-        version: 6,
+        version: 7,
         onCreate: _createDB,
         onUpgrade: _onUpgrade,
         onConfigure: _onConfigure,
@@ -42,12 +42,10 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // v5 -> v6 is purely additive: the semesters/subjects/schedules/items
-    // schema is unchanged, we only add the `user_profile` table. Do the cheap,
-    // non-destructive thing so real user data (subjects, items, schedules) is
-    // never dropped on the way to the gated/onboarded build.
+    // Additive upgrades:
     if (oldVersion >= 5) {
       await _createUserProfileTable(db);
+      await _createResourcesTable(db);
       return;
     }
 
@@ -304,6 +302,9 @@ class DatabaseHelper {
 
     // Single-row local user profile (the sign-in gate).
     await _createUserProfileTable(db);
+
+    // Subject Resources table (PPT, PDF, Excel, CSV, Docs)
+    await _createResourcesTable(db);
   }
 
   /// The local identity row created after Google sign-in. Single row, keyed by
@@ -318,6 +319,26 @@ class DatabaseHelper {
         photo_url TEXT,
         username TEXT,
         onboarded_at TEXT
+      )
+    ''');
+  }
+
+  /// Resources attached to specific subjects.
+  Future<void> _createResourcesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resources (
+        id TEXT PRIMARY KEY,
+        subject_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
       )
     ''');
   }

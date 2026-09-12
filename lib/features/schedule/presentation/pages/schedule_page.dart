@@ -516,30 +516,38 @@ class _CalendarDay extends StatelessWidget {
                 )
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Text(
-              '${date.day}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: textColor,
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w800,
+            Center(
+              child: Text(
+                '${date.day}',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w800,
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: hasSchedule
-                    ? (isSelected
+            if (hasSchedule)
+              Positioned(
+                bottom: 5,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isSelected
                           ? Colors.white
-                          : _SchedulePageState._brandGreen)
-                    : Colors.transparent,
-                shape: BoxShape.circle,
+                          : _SchedulePageState._brandGreen,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),

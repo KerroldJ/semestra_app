@@ -12,6 +12,8 @@ import 'quick_add_sheet.dart'
         showNewNoteSheet,
         showNewWorkItemSheet,
         showNewSubjectSheet;
+import '../../features/resource/presentation/widgets/upload_resource_sheet.dart'
+    show showUploadResourceSheet;
 
 /// Screen 09 — the compose sheet opened by the center compose ring.
 /// Semester is first; items that require a Semester or Subject are disabled
@@ -142,6 +144,19 @@ class _ComposeSheet extends ConsumerWidget {
                           : 'Capture a quick thought'),
                   isEnabled: hasSemesters && hasSubjects,
                   onTap: () => openThen(() => showNewNoteSheet(context)),
+                ),
+
+                // 6. Resources — relies on Semester & Subject
+                _ComposeOption(
+                  icon: Icons.folder_open_rounded,
+                  title: 'Resources',
+                  subtitle: !hasSemesters
+                      ? 'Requires a semester first'
+                      : (!hasSubjects
+                          ? 'Requires a subject first'
+                          : 'Upload PPT, PDF, Excel, CSV, or Docs'),
+                  isEnabled: hasSemesters && hasSubjects,
+                  onTap: () => openThen(() => showUploadResourceSheet(context)),
                 ),
                 const SizedBox(height: 14),
               ],
