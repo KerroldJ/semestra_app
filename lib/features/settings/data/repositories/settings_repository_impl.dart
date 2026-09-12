@@ -27,6 +27,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
       textSize: settingsMap['text_size'] ?? 'default',
       userName: settingsMap['user_name'] ?? 'Student',
       program: settingsMap['program'] ?? 'Computer Science',
+      backupDirectoryPath: settingsMap['backup_directory_path'],
     );
   }
 
@@ -42,5 +43,10 @@ class SettingsRepositoryImpl implements SettingsRepository {
     await localDataSource.saveSetting('text_size', settings.textSize);
     await localDataSource.saveSetting('user_name', settings.userName);
     await localDataSource.saveSetting('program', settings.program);
+    if (settings.backupDirectoryPath != null) {
+      await localDataSource.saveSetting('backup_directory_path', settings.backupDirectoryPath!);
+    } else {
+      await localDataSource.saveSetting('backup_directory_path', '');
+    }
   }
 }

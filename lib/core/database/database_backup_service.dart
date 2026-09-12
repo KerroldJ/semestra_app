@@ -9,12 +9,19 @@ class DatabaseBackupService {
     'subjects',
     'schedules',
     'items',
+    'resources',
     'settings',
     'user_profile',
   ];
 
-  /// Exports all database tables to a JSON string and writes to a file in documents directory
-  static Future<String> exportBackup() async {
+  /// Returns default documents directory path for backups
+  static Future<String> getDefaultBackupDirectory() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return directory.path;
+  }
+
+  /// Exports all database tables to a JSON string and writes to a file in documents or custom directory
+  static Future<String> exportBackup({String? customDirectoryPath}) async {
     final db = await DatabaseHelper.instance.database;
     final backupData = <String, List<Map<String, dynamic>>>{};
 
@@ -23,10 +30,25 @@ class DatabaseBackupService {
       backupData[table] = rows;
     }
 
-    final jsonString = jsonEncode(backupData);
-    final directory = await getApplicationDocumentsDirectory();
-    final backupFile = File('${directory.path}/semestra_backup.json');
+    final jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
+    
+    Directory directory;
+    if (customDirectoryPath != null && customDirectoryPath.trim().isNotEmpty) {
+      directory = Directory(customDirectoryPath.trim());
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+    } else {
+      directory = await getApplicationDocumentsDirectory();
+    }
+
+    final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+    final backupFile = File('${directory.path}/semestra_backup_$timestamp.json');
     await backupFile.writeAsString(jsonString);
+
+    // Also update the latest pointer file
+    final latestFile = File('${directory.path}/semestra_backup.json');
+    await latestFile.writeAsString(jsonString);
 
     return backupFile.path;
   }

@@ -67,6 +67,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await updateSettings(state.copyWith(textSize: size));
   }
 
+  Future<void> setBackupDirectoryPath(String? path) async {
+    await updateSettings(state.copyWith(
+      backupDirectoryPath: path,
+      clearBackupDirectory: path == null || path.trim().isEmpty,
+    ));
+  }
+
   Future<void> updateProfile({String? userName, String? program}) async {
     await updateSettings(state.copyWith(userName: userName, program: program));
   }

@@ -9,6 +9,7 @@ class AppSettings {
   final String textSize; // "small", "default", "large"
   final String userName;
   final String program; // e.g. "Computer Science"
+  final String? backupDirectoryPath;
 
   const AppSettings({
     required this.themeMode,
@@ -21,6 +22,7 @@ class AppSettings {
     this.textSize = 'default',
     this.userName = 'Student',
     this.program = 'Computer Science',
+    this.backupDirectoryPath,
   });
 
   AppSettings copyWith({
@@ -34,6 +36,8 @@ class AppSettings {
     String? textSize,
     String? userName,
     String? program,
+    String? backupDirectoryPath,
+    bool clearBackupDirectory = false,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -46,6 +50,9 @@ class AppSettings {
       textSize: textSize ?? this.textSize,
       userName: userName ?? this.userName,
       program: program ?? this.program,
+      backupDirectoryPath: clearBackupDirectory
+          ? null
+          : (backupDirectoryPath ?? this.backupDirectoryPath),
     );
   }
 
