@@ -19,7 +19,8 @@ import '../../../subject/domain/entities/subject_entity.dart';
 import '../../../subject/presentation/providers/subject_provider.dart';
 import '../../../semester/presentation/providers/semester_provider.dart';
 
-import '../../../../core/widgets/quick_add_sheet.dart' show showNewWorkItemSheet;
+import '../../../../core/widgets/quick_add_sheet.dart'
+    show showNewWorkItemSheet;
 
 /// Home — the dashboard matching the requested design with a top header,
 /// mascot banner, 4-metric stats row, and Today / Due next cards.
@@ -52,17 +53,21 @@ class TodayPage extends ConsumerWidget {
         .where((s) => activeSubjectIds.contains(s.subjectId))
         .toList();
     final items = allItems
-        .where((i) => i.subjectId != null &&
-            activeSubjectIds.contains(i.subjectId))
+        .where(
+          (i) => i.subjectId != null && activeSubjectIds.contains(i.subjectId),
+        )
         .toList();
 
     // Today's non-study classes, sorted by start.
-    final todays = schedules
-        .where((s) =>
-            s.dayOfWeek == now.weekday &&
-            s.scheduleType != ScheduleType.study)
-        .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final todays =
+        schedules
+            .where(
+              (s) =>
+                  s.dayOfWeek == now.weekday &&
+                  s.scheduleType != ScheduleType.study,
+            )
+            .toList()
+          ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
     final nowMinutes = now.hour * 60 + now.minute;
     ScheduleEntity? live;
@@ -88,14 +93,16 @@ class TodayPage extends ConsumerWidget {
     final done = work.where((i) => i.isCompleted).length;
     var standingScore = work.isEmpty ? 0.85 : done / work.length;
     if (groups.overdue.isNotEmpty) {
-      standingScore =
-          (standingScore - 0.15 * groups.overdue.length).clamp(0.1, 1.0);
+      standingScore = (standingScore - 0.15 * groups.overdue.length).clamp(
+        0.1,
+        1.0,
+      );
     }
     final standingLabel = standingScore >= 0.8
         ? 'Good'
         : standingScore >= 0.55
-            ? 'Fair'
-            : 'Needs work';
+        ? 'Fair'
+        : 'Needs work';
 
     // Recent activity, newest first.
     final recent = [...items]
@@ -111,7 +118,9 @@ class TodayPage extends ConsumerWidget {
     final brandGreen = const Color(0xFF1B8755);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF9FBFA),
+      backgroundColor: isDark
+          ? const Color(0xFF0D1117)
+          : const Color(0xFFF9FBFA),
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -142,7 +151,11 @@ class TodayPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 3),
-                          Icon(Icons.chevron_right_rounded, color: brandGreen, size: 18),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: brandGreen,
+                            size: 18,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 3),
@@ -163,10 +176,7 @@ class TodayPage extends ConsumerWidget {
             const SizedBox(height: 18),
 
             // ---- Hero Banner Card with Background and Mascot Character ----
-            _TodayHeroBanner(
-              now: now,
-              dueSoonCount: dueSoonCount,
-            ),
+            _TodayHeroBanner(now: now, dueSoonCount: dueSoonCount),
             const SizedBox(height: 22),
 
             // ---- 4 Metrics Stats Row ----
@@ -209,13 +219,25 @@ class TodayPage extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            _SectionTitle(
+              icon: Icons.widgets_outlined,
+              title: 'Features',
+            ),
+            const SizedBox(height: 12),
+            _QuickToolsGrid(
+              items: [
+                _QuickMenuItem(
+                  label: 'GPA Calculator',
+                  icon: Icons.calculate_rounded,
+                  onTap: () => context.push('/gpa-calculator'),
+                ),
+              ],
+            ),
             const SizedBox(height: 28),
 
             // ---- Today Section ----
-            _SectionTitle(
-              icon: Icons.wb_sunny_outlined,
-              title: 'Today',
-            ),
+            _SectionTitle(icon: Icons.wb_sunny_outlined, title: 'Today'),
             const SizedBox(height: 14),
             if (todays.isEmpty)
               _EmptyStateCard(
@@ -224,10 +246,16 @@ class TodayPage extends ConsumerWidget {
                 subtitle:
                     'Explore course materials or schedule a study session.',
                 actions: [
-                  _CardAction('View Syllabus', Icons.menu_book_outlined,
-                      () => context.go('/subjects')),
-                  _CardAction('Book Room', Icons.calendar_today_outlined,
-                      () => context.go('/planner')),
+                  _CardAction(
+                    'View Syllabus',
+                    Icons.menu_book_outlined,
+                    () => context.go('/subjects'),
+                  ),
+                  _CardAction(
+                    'Book Room',
+                    Icons.calendar_today_outlined,
+                    () => context.go('/planner'),
+                  ),
                 ],
               )
             else ...[
@@ -239,13 +267,18 @@ class TodayPage extends ConsumerWidget {
                 )
               else
                 _QuietCard(
-                    icon: Icons.free_breakfast_outlined,
-                    text: 'No class right now.'),
-              ...later.map((s) => Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: _ClassCard(
-                        schedule: s, subject: subjectsById[s.subjectId]),
-                  )),
+                  icon: Icons.free_breakfast_outlined,
+                  text: 'No class right now.',
+                ),
+              ...later.map(
+                (s) => Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: _ClassCard(
+                    schedule: s,
+                    subject: subjectsById[s.subjectId],
+                  ),
+                ),
+              ),
             ],
             const SizedBox(height: 28),
 
@@ -273,11 +306,18 @@ class TodayPage extends ConsumerWidget {
                 onAction: () => context.push('/assignments'),
               ),
               const SizedBox(height: 14),
-              ...dueNext.take(3).map((i) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _DueCard(
-                        item: i, subject: subjectsById[i.subjectId], now: now),
-                  )),
+              ...dueNext
+                  .take(3)
+                  .map(
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _DueCard(
+                        item: i,
+                        subject: subjectsById[i.subjectId],
+                        now: now,
+                      ),
+                    ),
+                  ),
             ],
 
             // ---- Recent updates ----
@@ -324,17 +364,16 @@ class _StatCell extends StatelessWidget {
     final textMuted = isDark ? Colors.white54 : const Color(0xFF6B7280);
     final accent = AppTheme.accent(context);
     final valueColor = isHighlight ? accent : textPrimary;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFE5EBE7);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
       decoration: BoxDecoration(
         color: isDark ? Theme.of(context).cardColor : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : const Color(0x11000000),
-        ),
+        border: Border.all(color: borderColor),
         boxShadow: isDark
             ? null
             : [
@@ -385,6 +424,124 @@ class _StatCell extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickMenuItem {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _QuickMenuItem({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+}
+
+class _QuickToolsGrid extends StatelessWidget {
+  final List<_QuickMenuItem> items;
+
+  const _QuickToolsGrid({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        const spacing = 10.0;
+        const columns = 4;
+        final itemWidth = (availableWidth - (columns - 1) * spacing) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: items.map((item) {
+            return SizedBox(
+              width: itemWidth,
+              child: _QuickMenuItemCard(item: item),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _QuickMenuItemCard extends StatelessWidget {
+  final _QuickMenuItem item;
+
+  const _QuickMenuItemCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final accent = AppTheme.accent(context);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFE5EBE7);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: item.onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? Theme.of(context).cardColor : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.soft(AppTheme.brandFill(context), 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  item.icon,
+                  color: accent,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 10.5,
+                  height: 1.15,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -461,10 +618,7 @@ class _TodayHeroBanner extends StatefulWidget {
   final DateTime now;
   final int dueSoonCount;
 
-  const _TodayHeroBanner({
-    required this.now,
-    required this.dueSoonCount,
-  });
+  const _TodayHeroBanner({required this.now, required this.dueSoonCount});
 
   @override
   State<_TodayHeroBanner> createState() => _TodayHeroBannerState();
@@ -499,8 +653,8 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
     final greetingWord2 = now.hour < 12
         ? 'morning'
         : now.hour < 18
-            ? 'afternoon'
-            : 'evening';
+        ? 'afternoon'
+        : 'evening';
 
     final textHeading = isDark ? Colors.white : const Color(0xFF0D3B2C);
     final textDate = isDark ? const Color(0xFF8FD8B3) : const Color(0xFF3B6756);
@@ -548,7 +702,10 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                       gradient: LinearGradient(
                         colors: isDark
                             ? [const Color(0xFF13281E), const Color(0xFF0B1912)]
-                            : [const Color(0xFFEAF7EE), const Color(0xFFDDF3E7)],
+                            : [
+                                const Color(0xFFEAF7EE),
+                                const Color(0xFFDDF3E7),
+                              ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -556,9 +713,7 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                   ),
                 ),
                 if (isDark)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.32),
-                  ),
+                  Container(color: Colors.black.withValues(alpha: 0.32)),
 
                 // 2. Mascot Character on Right (bottom-anchored, prominent)
                 Positioned(
@@ -610,8 +765,11 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.schedule_rounded,
-                                  size: isCompact ? 11 : 12, color: textDate),
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: isCompact ? 11 : 12,
+                                color: textDate,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 DateFormat('h:mm:ss a').format(_clock),
@@ -660,7 +818,9 @@ class _TodayHeroBannerState extends State<_TodayHeroBanner> {
                           border: Border.all(color: bubbleBorder),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.25 : 0.08,
+                              ),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -789,11 +949,7 @@ class _EmptyStateCard extends StatelessWidget {
               color: isDark ? const Color(0xFF162C20) : const Color(0xFFE8F6EE),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: brandGreen,
-            ),
+            child: Icon(icon, size: 24, color: brandGreen),
           ),
           const SizedBox(height: 14),
           Text(
@@ -863,11 +1019,7 @@ class _GhostButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (action.icon != null) ...[
-                Icon(
-                  action.icon,
-                  size: 15,
-                  color: brandGreen,
-                ),
+                Icon(action.icon, size: 15, color: brandGreen),
                 const SizedBox(width: 6),
               ],
               Flexible(
@@ -903,26 +1055,33 @@ class _RecentGrid extends StatelessWidget {
     for (var i = 0; i < items.length; i += 2) {
       final left = items[i];
       final right = i + 1 < items.length ? items[i + 1] : null;
-      rows.add(Padding(
-        padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
                   child: _UpdateCard(
-                      item: left, subject: subjectsById[left.subjectId])),
-              const SizedBox(width: 12),
-              Expanded(
-                child: right == null
-                    ? const SizedBox.shrink()
-                    : _UpdateCard(
-                        item: right, subject: subjectsById[right.subjectId]),
-              ),
-            ],
+                    item: left,
+                    subject: subjectsById[left.subjectId],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: right == null
+                      ? const SizedBox.shrink()
+                      : _UpdateCard(
+                          item: right,
+                          subject: subjectsById[right.subjectId],
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
-      ));
+      );
     }
     return Column(children: rows);
   }
@@ -973,10 +1132,9 @@ class _UpdateCard extends StatelessWidget {
             item.title.isEmpty ? 'Untitled' : item.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontSize: 13.5),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontSize: 13.5),
           ),
           const SizedBox(height: 3),
           Text(
@@ -1016,13 +1174,16 @@ class _ClassCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(Fmt.time12(schedule.startTime),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.merge(AppTheme.tnum)),
-              Text(schedule.scheduleType.label,
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                Fmt.time12(schedule.startTime),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.merge(AppTheme.tnum),
+              ),
+              Text(
+                schedule.scheduleType.label,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ),
           const SizedBox(width: 16),
@@ -1030,13 +1191,17 @@ class _ClassCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(subject?.name ?? 'Class',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  subject?.name ?? 'Class',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 if (schedule.classroom.isNotEmpty)
-                  Text(schedule.classroom,
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    schedule.classroom,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
               ],
             ),
           ),
@@ -1052,7 +1217,11 @@ class _DueCard extends StatelessWidget {
   final ItemEntity item;
   final SubjectEntity? subject;
   final DateTime now;
-  const _DueCard({required this.item, required this.subject, required this.now});
+  const _DueCard({
+    required this.item,
+    required this.subject,
+    required this.now,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1070,10 +1239,12 @@ class _DueCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  item.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 2),
                 Text(
                   subject?.name ??
@@ -1087,16 +1258,14 @@ class _DueCard extends StatelessWidget {
           ),
           Text(
             Fmt.dueLabel(item.dueDate!),
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
+            style: Theme.of(context).textTheme.bodyMedium
                 ?.merge(AppTheme.tnum)
                 .copyWith(
                   color: overdue
                       ? AppTheme.danger
                       : (isDark
-                          ? Colors.white.withValues(alpha: 0.65)
-                          : AppTheme.inkMuted),
+                            ? Colors.white.withValues(alpha: 0.65)
+                            : AppTheme.inkMuted),
                   fontWeight: FontWeight.w600,
                 ),
           ),

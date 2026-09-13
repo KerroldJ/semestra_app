@@ -86,6 +86,7 @@ flutter:
     - assets/images/Calendar.png
     - assets/images/CalendarBG.png
     - assets/images/CalendarEmptyMascot.png
+    - assets/images/GPA.png
     - assets/images/Subject.png
     - assets/images/SubjectBG.png
     - assets/images/Resources.png

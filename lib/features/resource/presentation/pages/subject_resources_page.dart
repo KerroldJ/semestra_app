@@ -783,8 +783,8 @@ class _SubjectResourcesPageState extends ConsumerState<SubjectResourcesPage> {
   Widget _buildStatDivider(BuildContext context) {
     return Container(
       width: 1,
-      height: 28,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      height: 38,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
       color: AppTheme.hairlineBorder(context),
     );
   }
@@ -819,54 +819,57 @@ class _StatColumnItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
           decoration: BoxDecoration(
             color: isSelected
                 ? iconColor.withValues(alpha: isDark ? 0.2 : 0.08)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Icon Box
               Container(
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: isDark
                       ? iconColor.withValues(alpha: 0.18)
                       : iconBgColor,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: iconColor, size: 18),
+                child: Icon(icon, color: iconColor, size: 16),
               ),
-              const SizedBox(width: 8),
-              // Count & Label
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$count',
-                    style: TextStyle(
-                      fontFamily: AppTheme.fontFamily,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? Colors.white : AppTheme.ink,
-                      height: 1.1,
-                    ),
-                  ),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white60 : AppTheme.inkMuted,
-                      height: 1.1,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 4),
+              // Count
+              Text(
+                '$count',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : AppTheme.ink,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 1),
+              // Label
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white60 : AppTheme.inkMuted,
+                  height: 1.1,
+                ),
               ),
             ],
           ),

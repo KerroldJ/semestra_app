@@ -13,6 +13,7 @@ import '../../features/today/presentation/pages/today_page.dart';
 import '../../features/item/presentation/pages/planner_page.dart';
 import '../../features/subject/presentation/pages/subjects_tab_page.dart';
 import '../../features/item/presentation/pages/notes_tab_page.dart';
+import '../../features/gpa/presentation/pages/gpa_calculator_page.dart';
 
 // Secondary / management pages (pushed)
 import '../../features/item/domain/entities/item_entity.dart';
@@ -35,15 +36,11 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 /// re-evaluates its redirect whenever auth state changes.
 class _AuthRefresh extends ChangeNotifier {
   _AuthRefresh(this._ref) {
-    _sub = _ref.listen<AuthState>(
-      authNotifierProvider,
-      (prev, next) {
-        if (prev?.status != next.status) {
-          notifyListeners();
-        }
-      },
-      fireImmediately: false,
-    );
+    _sub = _ref.listen<AuthState>(authNotifierProvider, (prev, next) {
+      if (prev?.status != next.status) {
+        notifyListeners();
+      }
+    }, fireImmediately: false);
   }
   final Ref _ref;
   late final ProviderSubscription<AuthState> _sub;
@@ -88,8 +85,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', redirect: (_, __) => '/semesters'),
       GoRoute(path: '/splash', builder: (_, __) => const SplashPage()),
       GoRoute(
-          path: '/onboarding/username',
-          builder: (_, __) => const UsernamePage()),
+        path: '/onboarding/username',
+        builder: (_, __) => const UsernamePage(),
+      ),
 
       // Main shell (5 tabs).
       ShellRoute(
@@ -136,6 +134,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const AssignmentsPage(),
       ),
       GoRoute(
+        path: '/gpa-calculator',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const GpaCalculatorPage(),
+      ),
+      GoRoute(
         path: '/assignments/edit',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, state) =>
@@ -144,8 +147,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notes/edit',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) =>
-            NoteEditorPage(note: state.extra as ItemEntity?),
+        builder: (_, state) => NoteEditorPage(note: state.extra as ItemEntity?),
       ),
       GoRoute(
         path: '/semester/overview',
