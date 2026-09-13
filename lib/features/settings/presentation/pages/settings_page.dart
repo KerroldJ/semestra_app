@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../../../core/database/database_backup_service.dart';
+import '../../../../core/security/biometric_lock_service.dart';
 import '../../../auth/domain/username_validator.dart';
 import '../../../auth/presentation/auth_provider.dart';
 import '../../../semester/presentation/providers/semester_provider.dart';
@@ -81,15 +82,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ? '@${profile!.username}'
                         : 'No username yet',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text('Stored on this device',
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    'Stored on this device',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
@@ -140,6 +143,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
 
+            // ---- Security ----
+            _Section(
+              label: 'Security',
+              child: _SwitchTile(
+                icon: Icons.fingerprint_rounded,
+                title: 'Device biometric lock',
+                subtitle: 'Lock Semestra when you close the app',
+                value: settings.biometricLockEnabled,
+                onChanged: _toggleBiometricLock,
+              ),
+            ),
+
             // ---- Semester ----
             _Section(
               label: 'Semester',
@@ -172,8 +187,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           : const Color(0xFFF4F7F5),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color:
-                            isDark ? Colors.white12 : const Color(0xFFE2E9E4),
+                        color: isDark
+                            ? Colors.white12
+                            : const Color(0xFFE2E9E4),
                       ),
                     ),
                     child: Material(
@@ -183,7 +199,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         onTap: () => _customizeBackupPath(currentBackupPath),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           child: Row(
                             children: [
                               Container(
@@ -223,15 +241,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                         ),
                                         if (settings.backupDirectoryPath !=
                                                 null &&
-                                            settings.backupDirectoryPath!
+                                            settings
+                                                .backupDirectoryPath!
                                                 .isNotEmpty) ...[
                                           const SizedBox(width: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 5, vertical: 1.5),
+                                              horizontal: 5,
+                                              vertical: 1.5,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF16A34A)
-                                                  .withValues(alpha: 0.15),
+                                              color: const Color(
+                                                0xFF16A34A,
+                                              ).withValues(alpha: 0.15),
                                               borderRadius:
                                                   BorderRadius.circular(4),
                                             ),
@@ -310,18 +332,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   Text(
                     'Semestra · offline-first',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     'Version 1.0.0',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: isDark
-                              ? Colors.white38
-                              : const Color(0xFF8B9E94),
-                        ),
+                      fontSize: 11,
+                      color: isDark ? Colors.white38 : const Color(0xFF8B9E94),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -329,11 +349,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     children: [
                       InkWell(
                         onTap: () => _openUrl(
-                            'https://kerroldjportfolio.com/projects/semestra/privacy-policy'),
+                          'https://kerroldjportfolio.com/projects/semestra/privacy-policy',
+                        ),
                         borderRadius: BorderRadius.circular(4),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 2),
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
                           child: Text(
                             'Privacy Policy',
                             style: TextStyle(
@@ -345,8 +368,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   : const Color(0xFF0A7D43),
                               decoration: TextDecoration.underline,
                               decorationColor: isDark
-                                  ? const Color(0xFF5EE59A).withValues(alpha: 0.5)
-                                  : const Color(0xFF0A7D43).withValues(alpha: 0.5),
+                                  ? const Color(
+                                      0xFF5EE59A,
+                                    ).withValues(alpha: 0.5)
+                                  : const Color(
+                                      0xFF0A7D43,
+                                    ).withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -366,11 +393,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                       InkWell(
                         onTap: () => _openUrl(
-                            'https://kerroldjportfolio.com/projects/semestra/terms-conditions'),
+                          'https://kerroldjportfolio.com/projects/semestra/terms-conditions',
+                        ),
                         borderRadius: BorderRadius.circular(4),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 2),
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
                           child: Text(
                             'Terms & Conditions',
                             style: TextStyle(
@@ -382,8 +412,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   : const Color(0xFF0A7D43),
                               decoration: TextDecoration.underline,
                               decorationColor: isDark
-                                  ? const Color(0xFF5EE59A).withValues(alpha: 0.5)
-                                  : const Color(0xFF0A7D43).withValues(alpha: 0.5),
+                                  ? const Color(
+                                      0xFF5EE59A,
+                                    ).withValues(alpha: 0.5)
+                                  : const Color(
+                                      0xFF0A7D43,
+                                    ).withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -437,8 +471,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Icon(
                 Icons.folder_open_rounded,
                 size: 20,
-                color:
-                    isDark ? const Color(0xFF5EE59A) : const Color(0xFF0A7D43),
+                color: isDark
+                    ? const Color(0xFF5EE59A)
+                    : const Color(0xFF0A7D43),
               ),
             ),
             const SizedBox(width: 10),
@@ -527,12 +562,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  Future<void> _toggleBiometricLock(bool enabled) async {
+    if (enabled) {
+      final available = await BiometricLockService.instance.isAvailable();
+      if (!available) {
+        AppToast.error('Biometrics are not available on this device');
+        return;
+      }
+
+      final unlocked = await BiometricLockService.instance.unlock();
+      if (!unlocked) {
+        AppToast.error('Biometric check was not completed');
+        return;
+      }
+    }
+
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .toggleBiometricLock(enabled);
+  }
+
   Future<void> _exportBackup() async {
     try {
-      final customPath =
-          ref.read(settingsNotifierProvider).backupDirectoryPath;
+      final customPath = ref.read(settingsNotifierProvider).backupDirectoryPath;
       final path = await DatabaseBackupService.exportBackup(
-          customDirectoryPath: customPath);
+        customDirectoryPath: customPath,
+      );
       AppToast.success('Backup written to: $path');
     } catch (e) {
       AppToast.error('Backup failed: $e');
@@ -563,7 +618,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         return;
       }
 
-      final success = await DatabaseBackupService.restoreBackupFromJson(jsonStr);
+      final success = await DatabaseBackupService.restoreBackupFromJson(
+        jsonStr,
+      );
       if (!mounted) return;
       if (success) {
         AppToast.success('Backup restored successfully!');
@@ -624,13 +681,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: 16),
             Text(title, style: Theme.of(ctx).textTheme.titleLarge),
             const SizedBox(height: 8),
-            ...options.map((o) => ListTile(
-                  title: Text(o.$2),
-                  trailing: o.$1 == current
-                      ? const Icon(Icons.check_rounded, color: AppTheme.gold)
-                      : null,
-                  onTap: () => Navigator.pop(ctx, o.$1),
-                )),
+            ...options.map(
+              (o) => ListTile(
+                title: Text(o.$2),
+                trailing: o.$1 == current
+                    ? const Icon(Icons.check_rounded, color: AppTheme.gold)
+                    : null,
+                onTap: () => Navigator.pop(ctx, o.$1),
+              ),
+            ),
             const SizedBox(height: 12),
           ],
         ),
@@ -727,8 +786,11 @@ class _SwitchTile extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        Icon(icon,
-            size: 22, color: isDark ? Colors.white70 : AppTheme.inkMuted),
+        Icon(
+          icon,
+          size: 22,
+          color: isDark ? Colors.white70 : AppTheme.inkMuted,
+        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -771,19 +833,29 @@ class _ChoiceTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(icon,
-                size: 22, color: isDark ? Colors.white70 : AppTheme.inkMuted),
+            Icon(
+              icon,
+              size: 22,
+              color: isDark ? Colors.white70 : AppTheme.inkMuted,
+            ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
-            Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppTheme.goldDeep)),
-            Icon(Icons.chevron_right_rounded,
-                size: 20, color: isDark ? Colors.white38 : AppTheme.inkFaint),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.goldDeep),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: isDark ? Colors.white38 : AppTheme.inkFaint,
+            ),
           ],
         ),
       ),
@@ -862,12 +934,8 @@ class _EditUsernameDialogState extends State<_EditUsernameDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Save'),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Save')),
       ],
     );
   }
 }
-

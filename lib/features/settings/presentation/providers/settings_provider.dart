@@ -7,9 +7,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   final SettingsRepository _repository;
 
   SettingsNotifier(this._repository)
-      : super(const AppSettings(
+    : super(
+        const AppSettings(
           themeMode: 'light',
           notificationsEnabled: true,
+          biometricLockEnabled: false,
           pomodoroFocusDuration: 25,
           pomodoroShortBreak: 5,
           pomodoroLongBreak: 15,
@@ -18,13 +20,14 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
             '/workspace',
             '/planner',
             '/progress',
-            '/profile'
+            '/profile',
           ],
           weekStartsOn: 1,
           textSize: 'default',
           userName: 'Student',
           program: 'Computer Science',
-        )) {
+        ),
+      ) {
     loadSettings();
   }
 
@@ -59,6 +62,10 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await updateSettings(state.copyWith(notificationsEnabled: enabled));
   }
 
+  Future<void> toggleBiometricLock(bool enabled) async {
+    await updateSettings(state.copyWith(biometricLockEnabled: enabled));
+  }
+
   Future<void> setWeekStartsOn(int day) async {
     await updateSettings(state.copyWith(weekStartsOn: day));
   }
@@ -68,10 +75,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 
   Future<void> setBackupDirectoryPath(String? path) async {
-    await updateSettings(state.copyWith(
-      backupDirectoryPath: path,
-      clearBackupDirectory: path == null || path.trim().isEmpty,
-    ));
+    await updateSettings(
+      state.copyWith(
+        backupDirectoryPath: path,
+        clearBackupDirectory: path == null || path.trim().isEmpty,
+      ),
+    );
   }
 
   Future<void> updateProfile({String? userName, String? program}) async {
@@ -81,8 +90,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> updateMainTabRoutes(List<String> routes) async {
     await updateSettings(state.copyWith(mainTabRoutes: routes));
   }
-
-
 
   Future<void> updatePomodoroFocus(int duration) async {
     await updateSettings(state.copyWith(pomodoroFocusDuration: duration));
@@ -97,7 +104,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 }
 
-final settingsNotifierProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
-  final repository = ref.watch(settingsRepositoryProvider);
-  return SettingsNotifier(repository);
-});
+final settingsNotifierProvider =
+    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+      final repository = ref.watch(settingsRepositoryProvider);
+      return SettingsNotifier(repository);
+    });

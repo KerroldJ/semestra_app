@@ -1,6 +1,7 @@
 class AppSettings {
   final String themeMode; // "dark", "light"
   final bool notificationsEnabled;
+  final bool biometricLockEnabled;
   final int pomodoroFocusDuration; // in minutes
   final int pomodoroShortBreak; // in minutes
   final int pomodoroLongBreak; // in minutes
@@ -14,6 +15,7 @@ class AppSettings {
   const AppSettings({
     required this.themeMode,
     required this.notificationsEnabled,
+    this.biometricLockEnabled = false,
     required this.pomodoroFocusDuration,
     required this.pomodoroShortBreak,
     required this.pomodoroLongBreak,
@@ -28,6 +30,7 @@ class AppSettings {
   AppSettings copyWith({
     String? themeMode,
     bool? notificationsEnabled,
+    bool? biometricLockEnabled,
     int? pomodoroFocusDuration,
     int? pomodoroShortBreak,
     int? pomodoroLongBreak,
@@ -42,7 +45,9 @@ class AppSettings {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      pomodoroFocusDuration: pomodoroFocusDuration ?? this.pomodoroFocusDuration,
+      biometricLockEnabled: biometricLockEnabled ?? this.biometricLockEnabled,
+      pomodoroFocusDuration:
+          pomodoroFocusDuration ?? this.pomodoroFocusDuration,
       pomodoroShortBreak: pomodoroShortBreak ?? this.pomodoroShortBreak,
       pomodoroLongBreak: pomodoroLongBreak ?? this.pomodoroLongBreak,
       mainTabRoutes: mainTabRoutes ?? this.mainTabRoutes,

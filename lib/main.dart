@@ -7,6 +7,8 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'app/navigation/app_router.dart';
 import 'core/database/db_factory_stub.dart'
     if (dart.library.io) 'core/database/db_factory_io.dart';
+import 'core/notifications/notification_sync_host.dart';
+import 'core/security/biometric_lock_host.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_toast.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
@@ -27,11 +29,7 @@ void main() {
     initDesktopDatabaseFactory();
   }
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
@@ -57,9 +55,13 @@ class MyApp extends ConsumerWidget {
       routerConfig: router,
       builder: (context, child) {
         final scaler = TextScaler.linear(settings.textScale);
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: scaler),
-          child: child ?? const SizedBox.shrink(),
+        return BiometricLockHost(
+          child: NotificationSyncHost(
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: scaler),
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
         );
       },
     );
